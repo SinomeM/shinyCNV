@@ -1,6 +1,10 @@
 library(shiny)
 library(data.table)
 
+if (file.exists("tmp.txt")) file.remove("tmp.txt")
+if (file.exists("tmp1.txt")) file.remove("tmp1.txt")
+
+
 ui <- fluidPage(
   
   # Application title
@@ -23,10 +27,10 @@ ui <- fluidPage(
                  actionButton("loadOK", "Proceed", class = "btn-success")
                ),
                mainPanel(
-                 verbatimTextOutput("sampload"),
-                 verbatimTextOutput("lociload"),
-                 verbatimTextOutput("cnvsload"),
-                 verbatimTextOutput("snpsload")
+                 verbatimTextOutput("sampload", placeholder = T),
+                 verbatimTextOutput("lociload", placeholder = T),
+                 verbatimTextOutput("cnvsload", placeholder = T),
+                 verbatimTextOutput("snpsload", placeholder = T)
                )
       ),
       
@@ -141,13 +145,14 @@ server <- function(input, output) {
           msg <- "Putative CNVs loaded but NOT in the correct format!!!"
         else {
           if (!"vi" %in% colnames(cnvs)) cnvs[, vi := -9]
+          if (!"ix" %in% colnames(cnvs)) cnvs[, ix := 1:nrow(cnvs)]
           msg <- "Putative CNVs successfully loaded"
         
         # save CNV table as tmp.txt to be loaded in the second tab
         fwrite(cnvs, "tmp.txt")
         # return message to be printed
-        msg
         }
+        msg
       }
     }
     
@@ -163,8 +168,7 @@ server <- function(input, output) {
       if (!is.null((tmp))) {
         snps <- fread(tmp$datapath, header = T)
         colnames(snps)
-        if (!all(c("sample_ID", "chr", "start", "end", "GT")
-                 %in% colnames(snps)))
+        if (!all(c("chr", "postion") %in% colnames(snps)))
           "SNPs loaded but NOT in the correct format!!!"
         else "SNPs successfully loaded"
       }
@@ -174,14 +178,19 @@ server <- function(input, output) {
   
   
   # filter putative CNVs
+  
+  # update loci list
   observeEvent(input$loadOK, {
     
-    cnvs <- fread("tmp.txt")
-    updateSelectInput(inputId = "si_locus", 
-                      choices = unique(cnvs$locus))
+    if (file.exists("tmp.txt")) {
+      cnvs <- fread("tmp.txt")
+      updateSelectInput(inputId = "si_locus", 
+                        choices = unique(cnvs$locus))
+    }
     
   })
   
+  # update putative cnv list
   output$cnvs <- renderTable({
     
     cnvs <- fread("tmp.txt")
@@ -202,9 +211,13 @@ server <- function(input, output) {
     cnvs <- cnvs[GT %in% s_gt & locus %in% s_loc & vi %in% s_eval,]
     
     # save CNV table as tmp.txt to be loaded in the third tab
-    fwrite(cnvs, "tmp1.txt")
-    cnvs
-  })
+    observeEvent(input$filterOK, {
+      fwrite(cnvs, "tmp1.txt")
+    })
+    
+    cnvs[, .(sample_ID, chr, start, end, GT, CN, locus, vi, ix)]
+    
+  }, striped = T, hover = T, boarded = T)
 
 
 }
