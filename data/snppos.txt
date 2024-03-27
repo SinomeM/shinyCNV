@@ -1,4 +1,4 @@
-chr	position
+Chr	Position
 1	82154
 1	752721
 1	776546
