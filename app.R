@@ -3,18 +3,18 @@ library(data.table)
 library(ggplot2)
 
 plotcnv <- function(cnvs, loci, samples_file, snps = NA) {
-  
+
   reg_len = 2000000
   i <- cnvs[1, ix]
-  
+
   cnvi <- cnvs[ix == i, ]
-  
+
   s <- cnvi[, sample_ID]
   loc <- cnvi[, locus]
   ll <- QCtreeCNV:::getline_locus(loci[locus == loc,])
   r_st <- as.integer(ll[3]) - reg_len
   r_en <- as.integer(ll[3]) + reg_len
-  
+
   fp <- samples_file[sample_ID == s, file_path_tabix][1]
   if (length(fp) == 0) stop("Can't find sample ", s,
                             " in samples list file")
@@ -25,7 +25,7 @@ plotcnv <- function(cnvs, loci, samples_file, snps = NA) {
   }
   raw[between(as.integer(Position), as.integer(ll[3]), as.integer(ll[4])),
       core := T][is.na(core), core := F]
-  
+
   m <- 1000000
   cc <- ifelse(cnvi[, GT] == 1, "red", "green")
   vv <- ifelse(cnvi[, GT] == 1, -1.5, 1.5)
@@ -54,11 +54,11 @@ plotcnv <- function(cnvs, loci, samples_file, snps = NA) {
     ylim(0, 1) +
     xlim(r_st/m, r_en/m) +
     theme_classic()
-  
+
   pl <- cowplot::plot_grid(pl_baf, pl_lrr, nrow = 2)
-  
+
   pl
-  
+
 }
 
 plotcnv(fread("data/put_cnv.txt")[, ix := 1:2], fread("data/loci.txt"),
@@ -66,16 +66,16 @@ plotcnv(fread("data/put_cnv.txt")[, ix := 1:2], fread("data/loci.txt"),
 
 
 ui <- fluidPage(
-  
+
   # Application title
   titlePanel("Shiny CNV Visual Inspection tool TESTING"),
-  
+
   # multiple tabs, one for each major step:
   # data load, putative CNVs filtering, and Visual Inspection
   mainPanel(
     tabsetPanel(
       id = "sidetab",
-      
+
       # First panel
       tabPanel("Import data",
                sidebarPanel(width = 6,
@@ -83,7 +83,7 @@ ui <- fluidPage(
                         fileInput("fi_loci", "Select loci list file"),
                         fileInput("fi_cnvs", "Select putative CNVs file"),
                         fileInput("fi_snps", "Select filtered SNPs file"),
-                        
+
                         actionButton("loadOK", "Proceed", class = "btn-success")),
                mainPanel(
                  verbatimTextOutput("sampload", placeholder = T),
@@ -92,7 +92,7 @@ ui <- fluidPage(
                  verbatimTextOutput("snpsload", placeholder = T)
                )
       ),
-      
+
       # Second panel
       tabPanel("Select Putative CNVs",
                sidebarPanel(width = 6,
@@ -103,14 +103,14 @@ ui <- fluidPage(
                  selectInput("si_eval", "Select putative CNVs state",
                              c("New", "True", "False", "Unkknown", "Error", "All"),
                              selected = "New"),
-                 
+
                  actionButton("filterOK", "Proceed", class = "btn-success")
                ),
                mainPanel(
                  tableOutput("cnvstb")
                )
       ),
-      
+
       # Third panel
       tabPanel("Visual Inspection",
                # would be nice to have the buttons centered, use table instead of
@@ -132,7 +132,7 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-  
+
   # data load and checks
   samples <- reactive({
     if (!is.null(input$fi_samples)) {
@@ -140,14 +140,14 @@ server <- function(input, output) {
       fread(tmp$datapath, header = T)
     }
   })
-  
+
   loci <- reactive({
     if (!is.null(input$fi_loci)) {
       tmp <- input$fi_loci
       fread(tmp$datapath, header = T)
     }
   })
-  
+
   cnvs <- reactive({
     if (!is.null(input$fi_cnvs)) {
       tmp <- input$fi_cnvs
@@ -157,20 +157,20 @@ server <- function(input, output) {
       cnvs
     }
   })
-  
+
   snps <- reactive({
     if (!is.null(input$fi_snps)) {
       tmp <- input$fi_snps
       fread(tmp$datapath, header = T)
-    } 
+    }
   })
-  
+
   output$sampload <- renderPrint({
-    
+
     samples <- samples()
-    
+
     if (is.null(samples)) "No samples file selected"
-    else 
+    else
       if (!all(c("sample_ID", "file_path_tabix")
                %in% colnames(samples)))
         "Samples list loaded but NOT in the correct format!!!"
@@ -178,9 +178,9 @@ server <- function(input, output) {
   })
 
   output$lociload <- renderPrint({
-    
+
     loci <- loci()
-    
+
     if (is.null(loci)) "No loci file selected"
     else
       if (!all(c("locus", "chr", "start", "end")
@@ -188,10 +188,10 @@ server <- function(input, output) {
         "Loci list loaded but NOT in the correct format!!!"
       else "Loci list successfully loaded"
   })
-  
+
   output$cnvsload <- renderPrint({
     cnvs <- cnvs()
-    
+
     if (is.null(cnvs))
       "No CNVs file selected"
     else
@@ -204,34 +204,34 @@ server <- function(input, output) {
                           choices = unique(cnvs()$locus))
         "Putative CNVs successfully loaded"
       }
-    
+
   })
-  
+
   output$snpsload <- renderPrint({
-    
+
     snps <- snps()
-    
+
     if (is.null(snps)) "No SNPs file selected"
-    else 
+    else
       if (!all(c("chr", "postion") %in% colnames(snps)))
         "SNPs loaded but NOT in the correct format!!!"
       else "SNPs successfully loaded"
   })
-  
-  
+
+
   # filter putative CNVs
-  
+
   cnvstb <- reactive({
-    
+
     if (input$loadOK != 0) {
-      
+
       cnvs <- cnvs()
       s_loc <- input$si_locus
-      
+
       if (input$si_gt == "Deletions") s_gt <- 1
       if (input$si_gt == "Duplications") s_gt <- 2
       if (input$si_gt == "Both") s_gt <- c(1,2)
-      
+
       c("New", "True", "False", "Unkknown", "Error", "All")
       if (input$si_eval == "New") s_eval <- -9
       if (input$si_eval == "True") s_eval <- 1
@@ -239,31 +239,31 @@ server <- function(input, output) {
       if (input$si_eval == "Unkknown") s_eval <- 3
       if (input$si_eval == "Error") s_eval <- 4
       if (input$si_eval == "All") s_eval <- 5
-      
+
       cnvs[GT %in% s_gt & locus %in% s_loc & vi %in% s_eval, 
              .(sample_ID, chr, start, end, GT, CN, locus, vi, ix)]
     }
-    
+
   })
-  
+
   output$cnvstb <- renderTable(cnvstb(), striped = T, hover = T, boarded = T)
 
-  
+
   # produce plot and save inspection results
-  
+
   activeplot <- reactive({
-    
+
     if (input$filterOK != 0) {
       if (!is.null(cnvstb()) & !is.null(loci()) & !is.null(samples()))
         if (!is.null(snps())) plotcnv(cnvs(), loci(), samples(), snps())
         else plotcnv(cnvs(), loci(), samples())
     }
-    
+
   })
-  
+
   output$activeplot <- renderPlot(activeplot())
 
 }
 
-# Run the application 
+# Run the application
 shinyApp(ui = ui, server = server)
