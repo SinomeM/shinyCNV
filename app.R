@@ -130,7 +130,7 @@ server <- function(input, output, session) {
   })
 
   ## error, increase i and update 'vo' to -7
-  observeEvent(input$ref, {
+  observeEvent(input$err, {
     r_dt$cnvs[r_dt$i, vo := -7]
     r_dt$i <- r_dt$i + 1
     r_dt$line <- r_dt$cnvs[r_dt$i]
