@@ -1,6 +1,7 @@
 library(data.table)
 library(ggplot2)
 library(shiny)
+# library(CNValidatron)
 
 cargs <- commandArgs(trailingOnly = T)
 # working dir
@@ -160,9 +161,10 @@ server <- function(input, output, session) {
   })
 
   output$pl <- renderPlot({
-    # from CNValidatron
+    # from CNValidatron!!!
+    # CNValidatron::plot_cnv(r_dt$line, samples[sample_ID == r_dt$line[, sample_ID], ],
     plot_cnv(r_dt$line, samples[sample_ID == r_dt$line[, sample_ID], ],
-             snps, tmp_plot = 1, shrink_lrr = 0.1)
+             snps, tmp_plot = 1)
   }, width = function() input$pl_h * 1.1, height = function() input$pl_h)
 
 
