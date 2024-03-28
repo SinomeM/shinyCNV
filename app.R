@@ -13,8 +13,9 @@ devtools::load_all()
 setwd(cargs[1])
 
 # load data (CNVs, samples and SNPs) and initialise 'vo' column if necessary
-cnvs <- fread(cargs[2])[, .(sample_ID, chr, start, end, numsnp, length, GT)]
-if (!vo %in% colnames(cnvs)) cnvs[, vo := -9]
+cnvs <- fread(cargs[2])
+if (!'vo' %in% colnames(cnvs)) cnvs[, vo := -9]
+cnvs <- cnvs[, .(sample_ID, chr, start, end, numsnp, length, GT, vo)]
 samples <- fread(cargs[3])[, .(sample_ID, file_path_tabix)]
 snps <- fread(cargs[4])
 setorder(cnvs, chr, start)
@@ -26,6 +27,10 @@ ui <- fluidPage(
 
   sidebarLayout(
     sidebarPanel(
+      textOutput('prog'),
+      br(),
+      tableOutput('cnv_line'),
+      br(),
       fluidRow(
         selectInput('vo_f', 'Filter CNV previous VI (select this first)',
                     c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
@@ -60,10 +65,6 @@ ui <- fluidPage(
     ),
 
     mainPanel(
-      textOutput('prog'),
-      br(),
-      tableOutput('cnv_line'),
-      br(),
       plotOutput("pl")
     )
   )
@@ -155,7 +156,7 @@ server <- function(input, output, session) {
   })
 
   output$cnv_line <- renderTable({
-    r_dt$line
+    r_dt$line[, !c('sample_ID')]
   })
 
   output$pl <- renderPlot({
