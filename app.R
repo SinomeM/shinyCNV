@@ -9,6 +9,8 @@ cargs <- commandArgs(trailingOnly = T)
 # samples
 # snps
 
+source('./R/plotting_function.R')
+
 # load data (CNVs, samples and SNPs) and initialise 'vo' column if necessary
 cnvs <- fread(cargs[2])
 if (!'vo' %in% colnames(cnvs)) cnvs[, vo := -9]
@@ -57,7 +59,7 @@ ui <- fluidPage(
       br(),
       fluidRow(
         sliderInput('pl_h', 'Change plot height',
-                    min = 400, max = 1000, value = 650)
+                    min = 400, max = 1000, value = 750)
       )
     ),
 

@@ -5,7 +5,7 @@
 
 
 plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
-                     tmp_plot = 0, min_lrr = -1.4, max_lrr = 1.3,
+                     tmp_plot = 0, min_lrr = -1.5, max_lrr = 1.5,
                      # the following parameters should not be changed by most users
                      shrink_lrr = 0.1, w = 96, z = 4, k1 = 31, k2 = 26, in_out_ratio = 6,
                      l_wind = 20000000, # top row Mbp
@@ -73,15 +73,15 @@ plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
 
   # plot in the original space
   if (tmp_plot == 1) {
-    a <- ggplot(dt_lrr, aes(position, lrr)) + geom_point(alpha = 0.3, colour = 'red') +
+    a <- ggplot(dt_lrr, aes(position, lrr)) + geom_point(alpha = 0.3, colour = 'red', size = 2.5) +
            ylim(min_lrr, max_lrr) + theme_bw() + xlim(ss, ee) +
            geom_segment(x = cnv$start, xend = cnv$end, y = 0, yend = 0, linetype = 3) +
            theme(axis.title.x = element_blank(), axis.title.y = element_blank())
-    b <- ggplot(dt_baf, aes(position, baf)) + geom_point(alpha = 0.3, colour = 'blue') +
+    b <- ggplot(dt_baf, aes(position, baf)) + geom_point(alpha = 0.3, colour = 'blue', size = 2.5) +
            theme_bw() + xlim(ss, ee) +
            theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
                  axis.title.x = element_blank(), axis.title.y = element_blank())
-    c <- ggplot(dt_big, aes(position, lrr)) + geom_point(alpha = 0.1, colour = 'purple') +
+    c <- ggplot(dt_big, aes(position, lrr)) + geom_point(alpha = 0.1, colour = 'purple', size = 2.5) +
            geom_segment(x = cnv$start, xend = cnv$end, y = 0, yend = 0) +
            ylim(min_lrr, max_lrr) + theme_bw() +
            theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
