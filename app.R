@@ -170,6 +170,12 @@ server <- function(input, output, session) {
   observeEvent(input$save, {
     fwrite(r_dt$cnvs, paste0(cargs[1], '/', input$project, '_vi_res.txt'), sep = '\t')
   })
+
+  # automatically save every 25 inspections
+  observe({
+    if (r_dt$i %% 25 == 0)
+      fwrite(r_dt$cnvs, paste0(cargs[1], '/', input$project, '_vi_res.txt'), sep = '\t')
+  })
 }
 
 
