@@ -9,10 +9,6 @@ cargs <- commandArgs(trailingOnly = T)
 # samples
 # snps
 
-setwd('~/Documents/CNValidatron_fl/')
-devtools::load_all()
-setwd(cargs[1])
-
 # load data (CNVs, samples and SNPs) and initialise 'vo' column if necessary
 cnvs <- fread(cargs[2])
 if (!'vo' %in% colnames(cnvs)) cnvs[, vo := -9]
@@ -161,8 +157,7 @@ server <- function(input, output, session) {
   })
 
   output$pl <- renderPlot({
-    # from CNValidatron!!!
-    # CNValidatron::plot_cnv(r_dt$line, samples[sample_ID == r_dt$line[, sample_ID], ],
+    # copied from CNValidatron nut now in ./R/
     plot_cnv(r_dt$line, samples[sample_ID == r_dt$line[, sample_ID], ],
              snps, tmp_plot = 1)
   }, width = function() input$pl_h * 1.1, height = function() input$pl_h)
