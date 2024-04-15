@@ -168,7 +168,7 @@ server <- function(input, output, session) {
   output$pl <- renderPlot({
     # copied from CNValidatron nut now in ./R/
     plot_cnv(r_dt$line, samples[sample_ID == r_dt$line[, sample_ID], ],
-             snps, tmp_plot = 1)
+             snps)
   }, width = function() input$pl_h * 1.1, height = function() input$pl_h)
 
 
