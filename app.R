@@ -78,21 +78,28 @@ server <- function(input, output, session) {
   r_dt$all_cnvs <- cnvs
   r_dt$cnvs <- cnvs
   r_dt$line <- cnvs[1]
+  r_dt$vo <- c(1:4, -7, -9)
+  r_dt$gt <- 1:2
 
   # Observers, filter the CNV table
   observeEvent(input$vo_f, {
-    if (input$vo_f == 'true') r_dt$cnvs <- r_dt$all_cnvs[vo == 1, ]
-    if (input$vo_f == 'false') r_dt$cnvs <- r_dt$all_cnvs[vo == 2, ]
-    if (input$vo_f == 'unk') r_dt$cnvs <- r_dt$all_cnvs[vo == 3, ]
-    if (input$vo_f == 'new') r_dt$cnvs <- r_dt$all_cnvs[vo == -9, ]
-    if (input$vo_f == 'other') r_dt$cnvs <- r_dt$all_cnvs[!vo %in% c(1:3, -9), ]
-    if (input$vo_f == 'all') r_dt$cnvs <- r_dt$all_cnvs
-    r_dt$line <- r_dt$cnvs[r_dt$i]
+    if (input$vo_f == 'true')  r_dt$vo <- 1
+    if (input$vo_f == 'false') r_dt$vo <- 2
+    if (input$vo_f == 'unk')   r_dt$vo <- 3
+    if (input$vo_f == 'new')   r_dt$vo <- -9
+    if (input$vo_f == 'other') r_dt$vo <- c(4, -7)
+    if (input$vo_f == 'all')   r_dt$vo <- c(1:4, -7, -9)
   })
 
   observeEvent(input$gt_f, {
-    gt <- ifelse(input$gt_f == 'dels', 1, 2)
-    r_dt$cnvs <- r_dt$cnvs[GT == gt, ]
+    if (input$gt_f == 'dels') r_dt$gt <- 1
+    if (input$gt_f == 'dups') r_dt$gt <- 2
+    if (input$gt_f == 'both') r_dt$gt <- 1:2
+  })
+
+  observeEvent(ignoreInit = T, list(input$vo_f, input$gt_f), {
+    # update cnv table and line
+    r_dt$cnvs <- cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo, ]
     r_dt$line <- r_dt$cnvs[r_dt$i]
   })
 
