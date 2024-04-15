@@ -33,7 +33,9 @@ ui <- fluidPage(
       fluidRow(
         selectInput('vo_f', 'Filter CNV previous VI (select this first)',
                     c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
-        selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both')
+        selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
+        textInput("min_len", "Minimum CNV length"),
+        textInput("min_snp", "Minimum number of SNPs")
       ),
       br(),
       br(),
@@ -80,6 +82,8 @@ server <- function(input, output, session) {
   r_dt$line <- cnvs[1]
   r_dt$vo <- c(1:4, -7, -9)
   r_dt$gt <- 1:2
+  r_dt$min_len <- 0
+  r_dt$min_snp <- 0
 
   # Observers, filter the CNV table
   observeEvent(input$vo_f, {
@@ -97,9 +101,19 @@ server <- function(input, output, session) {
     if (input$gt_f == 'both') r_dt$gt <- 1:2
   })
 
-  observeEvent(ignoreInit = T, list(input$vo_f, input$gt_f), {
+  observeEvent(input$min_len, {
+    r_dt$min_len <- as.integer(input$min_len)
+  })
+
+  observeEvent(input$min_snp, {
+    r_dt$min_snp <- as.integer(input$min_snp)
+  })
+
+  observeEvent(ignoreInit = T, list(input$vo_f, input$gt_f,
+                                    input$min_len, input$min_snp), {
     # update cnv table and line
-    r_dt$cnvs <- cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo, ]
+    r_dt$cnvs <- cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
+                      length >= r_dt$min_len & numsnp >= r_dt$min_snp, ]
     r_dt$line <- r_dt$cnvs[r_dt$i]
   })
 
