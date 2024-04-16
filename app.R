@@ -31,11 +31,11 @@ ui <- fluidPage(
       tableOutput('cnv_line'),
       br(),
       fluidRow(
-        selectInput('vo_f', 'Filter CNV previous VI (select this first)',
+        selectInput('vo_f', 'Filter CNV previous VI',
                     c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
         selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
-        textInput("min_len", "Minimum CNV length"),
-        textInput("min_snp", "Minimum number of SNPs")
+        textInput("min_len", "Minimum CNV length", '0'),
+        textInput("min_snp", "Minimum number of SNPs", '0')
       ),
       br(),
       br(),
