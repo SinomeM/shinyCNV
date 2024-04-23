@@ -71,20 +71,35 @@ plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
 
   w <- w+1
 
+  brr <- seq(from = ss, to = ee, length.out = 20)
+  brr_l <- round(brr/1000000, 1)
+  brr_l <- ifelse(brr_l > 0, brr_l, 0)
+  brr2 <- seq(from = ss2, to = ee2, length.out = 20)
+  brr_l2 <- round(brr2/1000000, 1)
+  brr_l2 <- ifelse(brr_l2 > 0, brr_l2, 0)
+
   # plot in the original space
     a <- ggplot(dt_lrr, aes(position, lrr)) + geom_point(alpha = 0.3, colour = 'red') +
-           ylim(min_lrr, max_lrr) + theme_bw() + xlim(ss, ee) +
-           geom_segment(x = cnv$start, xend = cnv$end, y = 0, yend = 0, linetype = 3) +
-           theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+           ylim(min_lrr, max_lrr) + theme_bw() +
+           theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+           scale_x_continuous(breaks = brr, labels = brr_l, limits = c(ss, ee))
+    if (cnv$GT == 1) a <- a + geom_segment(x = cnv$start, xend = cnv$end, y = 1,
+                                           yend = 1, linetype = 3)
+    if (cnv$GT == 2) a <- a + geom_segment(x = cnv$start, xend = cnv$end, y = -1,
+                                           yend = -1, linetype = 3)
+
     b <- ggplot(dt_baf, aes(position, baf)) + geom_point(alpha = 0.3, colour = 'blue') +
-           theme_bw() + xlim(ss, ee) +
+           theme_bw() +
            theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-                 axis.title.x = element_blank(), axis.title.y = element_blank())
+                 axis.title.x = element_blank(), axis.title.y = element_blank()) +
+           scale_x_continuous(breaks = brr, limits = c(ss, ee))
+
     c <- ggplot(dt_big, aes(position, lrr)) + geom_point(alpha = 0.1, colour = 'purple') +
-           geom_segment(x = cnv$start, xend = cnv$end, y = 0, yend = 0) +
-           ylim(min_lrr, max_lrr) + theme_bw() + xlim(ss2, ee2) +
-           theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-                 axis.title.x = element_blank(), axis.title.y = element_blank())
+           ylim(min_lrr, max_lrr) + theme_bw() +
+           theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+           scale_x_continuous(breaks = brr2, labels = brr_l2, limits = c(ss2, ee2))
+    if (cnv$GT == 1) c <- c + geom_segment(x = cnv$start, xend = cnv$end, y = 1, yend = 1)
+    if (cnv$GT == 2) c <- c + geom_segment(x = cnv$start, xend = cnv$end, y = -1, yend = -1)
 
     pl <- cowplot::plot_grid(c, b, a, ncol = 1)
     return(pl)

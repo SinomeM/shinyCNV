@@ -37,7 +37,7 @@ ui <- fluidPage(
       fluidRow(
         textAreaInput('project', 'Project Name', 'visual_inspection'),
         sliderInput('pl_h', 'Change plot height',
-                    min = 400, max = 1000, value = 750),
+                    min = 400, max = 1000, value = 750, step = 50),
         br(),
         actionButton("true", "True", class = "btn-success"),
         actionButton("false", "False", class = "btn-danger"),
@@ -148,6 +148,8 @@ server <- function(input, output, session) {
                           start = r_dt$loc_st, end = r_dt$loc_en)
       r_dt$cnvs <- QCtreeCNV::select_stitch_calls(r_dt$cnvs, locus,
                                                   minoverlap = 0)
+      r_dt$cnvs[, ':=' (st_cnv = start, st_en = end)][,
+                  ':=' (start = locus$start, end = locus$end)]
       r_dt$line <- r_dt$cnvs[r_dt$i]
       #print(r_dt$cnvs)
     }
@@ -227,7 +229,7 @@ server <- function(input, output, session) {
     # copied from CNValidatron nut now in ./R/
     plot_cnv(r_dt$line, samples[sample_ID == r_dt$line[, sample_ID], ],
              snps)
-  }, width = function() input$pl_h * 1.1, height = function() input$pl_h)
+  }, width = function() input$pl_h * 1.2, height = function() input$pl_h)
 
 
   # Save results when asked
