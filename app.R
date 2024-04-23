@@ -11,10 +11,16 @@ cargs <- commandArgs(trailingOnly = T)
 
 source('./R/plotting_function.R')
 
+# quickly check inputs
+if (!dir.exists(cargs[1])) stop('Provided folder not found!')
+if (!file.exists(cargs[2])) stop('CNVs table not found!')
+if (!file.exists(cargs[3])) stop('Samples table not found!')
+if (!file.exists(cargs[4])) stop('SNPs table not found!')
+
 # load data (CNVs, samples and SNPs) and initialise 'vo' column if necessary
 cnvs <- fread(cargs[2])
 if (!'vo' %in% colnames(cnvs)) cnvs[, vo := -9]
-cnvs <- cnvs[, .(sample_ID, chr, start, end, numsnp, length, GT, vo)]
+cnvs <- cnvs[, .(sample_ID, chr, start, end, numsnp, length, GT, CN, vo)]
 samples <- fread(cargs[3])[, .(sample_ID, file_path_tabix)]
 snps <- fread(cargs[4])
 setorder(cnvs, chr, start)
@@ -22,50 +28,47 @@ setorder(cnvs, chr, start)
 
 # UI function ----
 ui <- fluidPage(
-  titlePanel("CNV Visual Validation"),
+  titlePanel("CNVs Visual Validation"),
 
   sidebarLayout(
     sidebarPanel(
       textOutput('prog'),
       br(),
-      tableOutput('cnv_line'),
-      br(),
       fluidRow(
-        selectInput('vo_f', 'Filter CNV previous VI',
-                    c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
-        selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
-        textInput("min_len", "Minimum CNV length", '0'),
-        textInput("min_snp", "Minimum number of SNPs", '0')
-      ),
-      br(),
-      br(),
-      fluidRow(
+        textAreaInput('project', 'Project Name', 'visual_inspection'),
+        sliderInput('pl_h', 'Change plot height',
+                    min = 400, max = 1000, value = 750),
+        br(),
         actionButton("true", "True", class = "btn-success"),
         actionButton("false", "False", class = "btn-danger"),
         actionButton("unk", "Unkown", class = 'btn-warning'),
         actionButton("err", "Error"),
-        actionButton('ref', 'Boundary Refinement Needed')
-      ),
+        actionButton('ref', 'Needs Boundary Ref')
+        ),
       fluidRow(
         actionButton("prev", "Previous", class = "btn-default"),
-        actionButton("nxt", "Next", class = "btn-default")
-      ),
-      br(),
-      br(),
-      br(),
-      fluidRow(
-        textAreaInput('project', 'Project Name', 'visual_inspection'),
+        actionButton("nxt", "Next", class = "btn-default"),
         actionButton('save', 'Save results')
-      ),
-      br(),
+        ),
       br(),
       fluidRow(
-        sliderInput('pl_h', 'Change plot height',
-                    min = 400, max = 1000, value = 750)
+        h5(paste0('In order to filter the CNVs, please set the following',
+                  ' fields in the order in which they appear')),
+        selectInput('vo_f', 'Filter CNV previous VI',
+                    c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
+        selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
+        textInput("min_len", "Minimum CNV length", '0'),
+        textInput("min_snp", "Minimum number of SNPs", '0'),
+        textInput("locus", "Locus name", '0'),
+        selectInput("loc_chr", "Locus chr", 0:24, '0'),
+        textInput("loc_st", "Locus start", '0'),
+        textInput("loc_en", "Locus end", '0'),
+        sliderInput("loc_min_overlap", "Minimum overlap CNV over locus", min = 0, max = 0.75, value = 0, step = 0.05)
       )
     ),
 
     mainPanel(
+      tableOutput('cnv_line'),
       plotOutput("pl")
     )
   )
@@ -76,14 +79,20 @@ server <- function(input, output, session) {
 
   # initialise dt, I guess it could be done better
   r_dt <- reactiveValues()
+
   r_dt$i <- 1
-  r_dt$all_cnvs <- cnvs
   r_dt$cnvs <- cnvs
   r_dt$line <- cnvs[1]
+
   r_dt$vo <- c(1:4, -7, -9)
   r_dt$gt <- 1:2
   r_dt$min_len <- 0
   r_dt$min_snp <- 0
+
+  r_dt$loc_st <- 0
+  r_dt$loc_en <- 0
+  r_dt$loc_chr <- 0
+  r_dt$loc_min_overlap <- 0
 
   # Observers, filter the CNV table
   observeEvent(input$vo_f, {
@@ -94,6 +103,7 @@ server <- function(input, output, session) {
     if (input$vo_f == 'other') r_dt$vo <- c(4, -7)
     if (input$vo_f == 'all')   r_dt$vo <- c(1:4, -7, -9)
   })
+
 
   observeEvent(input$gt_f, {
     if (input$gt_f == 'dels') r_dt$gt <- 1
@@ -115,6 +125,40 @@ server <- function(input, output, session) {
     r_dt$cnvs <- cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
                       length >= r_dt$min_len & numsnp >= r_dt$min_snp, ]
     r_dt$line <- r_dt$cnvs[r_dt$i]
+  })
+
+
+  observeEvent(input$loc_chr, {
+    r_dt$loc_chr <- as.integer(input$loc_chr)
+  })
+
+  observeEvent(input$loc_st, {
+    r_dt$loc_st <- as.integer(input$loc_st)
+  })
+
+  observeEvent(input$loc_en, {
+    r_dt$loc_en <- as.integer(input$loc_en)
+  })
+
+  observeEvent(ignoreInit = T, list(input$loc_chr, input$loc_st,
+                                    input$loc_en), {
+    # update cnv table and line
+    if(r_dt$loc_chr != 0 & r_dt$loc_st != 0 & r_dt$loc_en != 0) {
+      locus <- data.table(locus = input$locus, chr = r_dt$loc_chr,
+                          start = r_dt$loc_st, end = r_dt$loc_en)
+      r_dt$cnvs <- QCtreeCNV::select_stitch_calls(r_dt$cnvs, locus,
+                                                  minoverlap = 0)
+      r_dt$line <- r_dt$cnvs[r_dt$i]
+      #print(r_dt$cnvs)
+    }
+  })
+
+  observeEvent(input$loc_min_overlap, {
+    if(r_dt$loc_chr != 0 & r_dt$loc_st != 0 & r_dt$loc_en != 0) {
+      # update cnv table and line
+      r_dt$cnvs <- r_dt$cnvs[overlap >= input$loc_min_overlap, ]
+      r_dt$line <- r_dt$cnvs[r_dt$i]
+    }
   })
 
 
@@ -176,7 +220,7 @@ server <- function(input, output, session) {
   })
 
   output$cnv_line <- renderTable({
-    r_dt$line[, !c('sample_ID')]
+    r_dt$line[, ]
   })
 
   output$pl <- renderPlot({
