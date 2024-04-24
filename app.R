@@ -52,17 +52,18 @@ ui <- fluidPage(
         ),
       br(),
       fluidRow(
-        h5(paste0('In order to filter the CNVs, please set the following',
-                  ' fields in the order in which they appear')),
+        h5('Use the following fields to filter CNVs'),
         selectInput('vo_f', 'Filter CNV previous VI',
                     c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
         selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
         textInput("min_len", "Minimum CNV length", '0'),
         textInput("min_snp", "Minimum number of SNPs", '0'),
+        h5('Fixed locus? Select chr and name, then **paste** in start and end'),
         textInput("locus", "Locus name", '0'),
         selectInput("loc_chr", "Locus chr", 0:24, '0'),
         textInput("loc_st", "Locus start", '0'),
         textInput("loc_en", "Locus end", '0'),
+        h5('When processing is complete, set the minimu overlap filter'),
         sliderInput("loc_min_overlap", "Minimum overlap CNV over locus", min = 0, max = 0.75, value = 0, step = 0.05)
       )
     ),

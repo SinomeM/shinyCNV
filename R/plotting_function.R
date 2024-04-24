@@ -104,14 +104,19 @@ plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
                                            yend = -1, linetype = 3)
 
     if ('locus' %in% colnames(cnv)) {
-      a <- a + geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = -1.27, yend = -1.23) +
-               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = -1.27, yend = -1.23) +
-               geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = 1.27, yend = 1.23) +
-               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = 1.27, yend = 1.23)
-      c <- c + geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = -1.27, yend = -1.23) +
-               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = -1.27, yend = -1.23) +
-               geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = 1.27, yend = 1.23) +
-               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = 1.27, yend = 1.23)
+      a <- a + geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = -1.45, yend = -1.40) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = -1.45, yend = -1.40) +
+               geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = 1.40, yend = 1.45) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = 1.40, yend = 1.45)
+      c <- c + geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = -1.45, yend = -1.40) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = -1.45, yend = -1.40) +
+               geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = 1.40, yend = 1.45) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = 1.40, yend = 1.45)
+
+      b <- b + geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = -0.03, yend = -0.01) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = -0.03, yend = -0.01) +
+               geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = 1.01, yend = 1.03) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = 1.01, yend = 1.03)
     }
 
     pl <- cowplot::plot_grid(c, b, a, ncol = 1)
