@@ -98,8 +98,21 @@ plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
            ylim(min_lrr, max_lrr) + theme_bw() +
            theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
            scale_x_continuous(breaks = brr2, labels = brr_l2, limits = c(ss2, ee2))
-    if (cnv$GT == 1) c <- c + geom_segment(x = cnv$start, xend = cnv$end, y = 1, yend = 1)
-    if (cnv$GT == 2) c <- c + geom_segment(x = cnv$start, xend = cnv$end, y = -1, yend = -1)
+    if (cnv$GT == 1) c <- c + geom_segment(x = cnv$start, xend = cnv$end, y = 1,
+                                           yend = 1, linetype = 3)
+    if (cnv$GT == 2) c <- c + geom_segment(x = cnv$start, xend = cnv$end, y = -1,
+                                           yend = -1, linetype = 3)
+
+    if ('locus' %in% colnames(cnv)) {
+      a <- a + geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = -1.27, yend = -1.23) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = -1.27, yend = -1.23) +
+               geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = 1.27, yend = 1.23) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = 1.27, yend = 1.23)
+      c <- c + geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = -1.27, yend = -1.23) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = -1.27, yend = -1.23) +
+               geom_segment(x = cnv$loc_st, xend = cnv$loc_st, y = 1.27, yend = 1.23) +
+               geom_segment(x = cnv$loc_en, xend = cnv$loc_en, y = 1.27, yend = 1.23)
+    }
 
     pl <- cowplot::plot_grid(c, b, a, ncol = 1)
     return(pl)

@@ -144,12 +144,12 @@ server <- function(input, output, session) {
                                     input$loc_en), {
     # update cnv table and line
     if(r_dt$loc_chr != 0 & r_dt$loc_st != 0 & r_dt$loc_en != 0) {
-      locus <- data.table(locus = input$locus, chr = r_dt$loc_chr,
+      lloc <- data.table(locus = input$locus, chr = r_dt$loc_chr,
                           start = r_dt$loc_st, end = r_dt$loc_en)
-      r_dt$cnvs <- QCtreeCNV::select_stitch_calls(r_dt$cnvs, locus,
+      r_dt$cnvs <- QCtreeCNV::select_stitch_calls(r_dt$cnvs, lloc,
                                                   minoverlap = 0)
-      r_dt$cnvs[, ':=' (st_cnv = start, st_en = end)][,
-                  ':=' (start = locus$start, end = locus$end)]
+      r_dt$cnvs[, ':=' (loc_st = lloc$start, loc_en = lloc$end)]
+      r_dt$cnvs[, c('gap', 'stitch', 'densnp') := NULL]
       r_dt$line <- r_dt$cnvs[r_dt$i]
       #print(r_dt$cnvs)
     }
@@ -218,7 +218,7 @@ server <- function(input, output, session) {
 
   output$prog <- renderText({
     paste0('CNV ', r_dt$i, ' out of ', r_dt$cnvs[, .N], '. ',
-            round(r_dt$i / r_dt$cnvs[, .N] * 100), '% completed.')
+            round((r_dt$i - 1) / r_dt$cnvs[, .N] * 100), '% completed.')
   })
 
   output$cnv_line <- renderTable({
