@@ -57,6 +57,7 @@ ui <- fluidPage(
                     c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
         selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
         textInput("min_len", "Minimum CNV length", '0'),
+        textInput("max_len", "Maximum CNV length", '10000000'),
         textInput("min_snp", "Minimum number of SNPs", '0'),
         h5('Fixed locus? Select input the details in the following fields'),
         textInput("locus", "Locus name", '0'),
@@ -144,7 +145,7 @@ server <- function(input, output, session) {
     # update cnv table if a locus is selected
     if(r_dt$loc_chr != 0 & r_dt$loc_st != 0 & r_dt$loc_en != 0) {
       lloc <- data.table(locus = input$locus, chr = r_dt$loc_chr,
-                          start = r_dt$loc_st, end = r_dt$loc_en)
+                         start = r_dt$loc_st, end = r_dt$loc_en)
       r_dt$cnvs <- QCtreeCNV::select_stitch_calls(r_dt$cnvs, lloc,
                                                   minoverlap = 0)
       if (nrow(r_dt$cnvs) != 0) {
@@ -162,7 +163,8 @@ server <- function(input, output, session) {
     }
     else {
       r_dt$cnvs <- r_dt$cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
-                        length >= r_dt$min_len & numsnp >= r_dt$min_snp, ]
+                             between(length, r_dt$min_len, r_dt$max_len)
+                             & numsnp >= r_dt$min_snp, ]
 
       r_dt$line <- r_dt$cnvs[r_dt$i]
     }

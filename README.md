@@ -39,6 +39,20 @@ Save will write the results table in the `workingdir` as `project_name`\_vi\_res
 To filter CNVs follow the instructions in on the left and the then click
 "Run Filtering!" at the very bottom.
 
+If the app freezes and the console report and error on these lines:
+
+```
+Warning: Error in if: missing value where TRUE/FALSE needed
+  3: runApp
+  2: print.shiny.appobj
+  1: <Anonymous>
+```
+
+then it means there are nor CNVs in the selected locus with the current
+filters set. If the SNPs and length filters results in an empty table,
+a message will appear in the middle of the plot.
+
+
 
 ## Visual inspection codes
 
