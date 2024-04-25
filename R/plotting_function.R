@@ -18,12 +18,19 @@ plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
   # everything will be [0,w-1] then I will add 1 to make it [1,w]
   w <- w-1
 
-  # in_out_ratio is now a function of the legnth
+  # in_out_ratio is now a function of the length
   len <- cnv$end - cnv$start + 1
+  if ('locus' %in% colnames(cnv)) len <- cnv$loc_en - cnv$loc_st + 1
+
   if (len <= 100000) in_out_ratio <- 9
   if (between(len, 100001, 1000000)) in_out_ratio <- 7
   if (len > 1000000) in_out_ratio <- 5
+
   ss <- cnv$start - (in_out_ratio*len);  ee <- cnv$end + (in_out_ratio*len)
+
+  if ('locus' %in% colnames(cnv)) {
+    ss <- cnv$loc_st - (in_out_ratio*len);  ee <- cnv$loc_en + (in_out_ratio*len)
+  }
 
 
   # load snps data, ALL chromosome is loaded now!
