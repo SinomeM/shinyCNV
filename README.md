@@ -13,11 +13,13 @@ described in details
 
 The plot has three row:
 
-- top row shows the LRR in a 20Mbp region centered around the
-  CNV as much as possible
-- middle row show the BAF pattern for the CNV and 4 lengths on each side
+- middle row show the BAF pattern for the CNV and 4-6 lengths on each side
 - bottom row shows the LRR patter for this same region plus a dotted
   segment to indicate where the CNV call is.
+- top row shows the same as the bottom but even more zoomed out
+
+If a specific locus is selected, locus boundaries are marked with tick marks
+in all three rows.
 
 
 ## Usage
@@ -33,6 +35,9 @@ on CNV type (deletions or duplications).
 The buttons do what you expect them to do ;)
 
 Save will write the results table in the `workingdir` as `project_name`\_vi\_res.txt.
+
+To filter CNVs follow the instructions in on the left and the then click
+"Run Filtering!" at the very bottom.
 
 
 ## Visual inspection codes
@@ -58,7 +63,7 @@ R dependencies:
 - ggplot
 - CNValidatron
 
-Other dependencies:
+Linux dependencies:
 
 - tabix
 - a browser
