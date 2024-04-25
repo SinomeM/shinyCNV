@@ -157,16 +157,15 @@ server <- function(input, output, session) {
     }
     #
     # update cnv table and line
+    r_dt$cnvs <- r_dt$cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
+                           between(length, r_dt$min_len, r_dt$max_len)
+                           & numsnp >= r_dt$min_snp, ]
+
+    r_dt$line <- r_dt$cnvs[r_dt$i]
+
     if (nrow(r_dt$cnvs) == 0) {
       r_dt$cnvs <- cnvs[1]
       r_dt$empty_dt <- T
-    }
-    else {
-      r_dt$cnvs <- r_dt$cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
-                             between(length, r_dt$min_len, r_dt$max_len)
-                             & numsnp >= r_dt$min_snp, ]
-
-      r_dt$line <- r_dt$cnvs[r_dt$i]
     }
   })
 
