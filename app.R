@@ -58,13 +58,15 @@ ui <- fluidPage(
         selectInput('gt_f', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
         textInput("min_len", "Minimum CNV length", '0'),
         textInput("min_snp", "Minimum number of SNPs", '0'),
-        h5('Fixed locus? Select chr and name, then **paste** in start and end'),
+        h5('Fixed locus? Select input the details in the following fields'),
         textInput("locus", "Locus name", '0'),
         selectInput("loc_chr", "Locus chr", 0:24, '0'),
         textInput("loc_st", "Locus start", '0'),
         textInput("loc_en", "Locus end", '0'),
-        h5('When processing is complete, set the minimu overlap filter'),
-        sliderInput("loc_min_overlap", "Minimum overlap CNV over locus", min = 0, max = 0.75, value = 0, step = 0.05)
+        sliderInput("loc_min_overlap", "Minimum overlap CNV over locus", min = 0,
+                    max = 0.75, value = 0, step = 0.05),
+        h5('After setting all required filters, click the "Run Filtering!" and wait for the updated CNV count'),
+        actionButton('run', 'Run Filtering!', class = 'btn-success')
       )
     ),
 
@@ -122,10 +124,7 @@ server <- function(input, output, session) {
 
   observeEvent(ignoreInit = T, list(input$vo_f, input$gt_f,
                                     input$min_len, input$min_snp), {
-    # update cnv table and line
-    r_dt$cnvs <- cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
-                      length >= r_dt$min_len & numsnp >= r_dt$min_snp, ]
-    r_dt$line <- r_dt$cnvs[r_dt$i]
+
   })
 
 
@@ -143,7 +142,15 @@ server <- function(input, output, session) {
 
   observeEvent(ignoreInit = T, list(input$loc_chr, input$loc_st,
                                     input$loc_en), {
-    # update cnv table and line
+  })
+
+  observeEvent(input$loc_min_overlap, {
+  })
+
+  observeEvent(input$run, {
+    r_dt$cnvs <- cnvs
+    #
+    # update cnv table if a locus is selected
     if(r_dt$loc_chr != 0 & r_dt$loc_st != 0 & r_dt$loc_en != 0) {
       lloc <- data.table(locus = input$locus, chr = r_dt$loc_chr,
                           start = r_dt$loc_st, end = r_dt$loc_en)
@@ -151,17 +158,14 @@ server <- function(input, output, session) {
                                                   minoverlap = 0)
       r_dt$cnvs[, ':=' (loc_st = lloc$start, loc_en = lloc$end)]
       r_dt$cnvs[, c('gap', 'stitch', 'densnp') := NULL]
-      r_dt$line <- r_dt$cnvs[r_dt$i]
+      r_dt$cnvs <- r_dt$cnvs[overlap >= input$loc_min_overlap, ]
       #print(r_dt$cnvs)
     }
-  })
-
-  observeEvent(input$loc_min_overlap, {
-    if(r_dt$loc_chr != 0 & r_dt$loc_st != 0 & r_dt$loc_en != 0) {
-      # update cnv table and line
-      r_dt$cnvs <- r_dt$cnvs[overlap >= input$loc_min_overlap, ]
-      r_dt$line <- r_dt$cnvs[r_dt$i]
-    }
+    #
+    # update cnv table and line
+    r_dt$cnvs <- r_dt$cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
+                      length >= r_dt$min_len & numsnp >= r_dt$min_snp, ]
+    r_dt$line <- r_dt$cnvs[r_dt$i]
   })
 
 
