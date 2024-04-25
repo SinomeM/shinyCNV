@@ -72,7 +72,8 @@ ui <- fluidPage(
 
     mainPanel(
       tableOutput('cnv_line'),
-      plotOutput("pl")
+      plotOutput("pl"),
+      textOutput('empty_dt')
     )
   )
 )
@@ -96,6 +97,8 @@ server <- function(input, output, session) {
   r_dt$loc_en <- 0
   r_dt$loc_chr <- 0
   r_dt$loc_min_overlap <- 0
+
+  r_dt$empty_dt <- F
 
   # Observers, filter the CNV table
   observeEvent(input$vo_f, {
@@ -144,16 +147,25 @@ server <- function(input, output, session) {
                           start = r_dt$loc_st, end = r_dt$loc_en)
       r_dt$cnvs <- QCtreeCNV::select_stitch_calls(r_dt$cnvs, lloc,
                                                   minoverlap = 0)
-      r_dt$cnvs[, ':=' (loc_st = lloc$start, loc_en = lloc$end)]
-      r_dt$cnvs[, c('gap', 'stitch', 'densnp') := NULL]
-      r_dt$cnvs <- r_dt$cnvs[overlap >= input$loc_min_overlap, ]
-      #print(r_dt$cnvs)
+      if (nrow(r_dt$cnvs) != 0) {
+        r_dt$cnvs[, ':=' (loc_st = lloc$start, loc_en = lloc$end)]
+        r_dt$cnvs[, c('gap', 'stitch', 'densnp') := NULL]
+        r_dt$cnvs <- r_dt$cnvs[overlap >= input$loc_min_overlap, ]
+        #print(r_dt$cnvs)
+      }
     }
     #
     # update cnv table and line
-    r_dt$cnvs <- r_dt$cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
-                      length >= r_dt$min_len & numsnp >= r_dt$min_snp, ]
-    r_dt$line <- r_dt$cnvs[r_dt$i]
+    if (nrow(r_dt$cnvs) == 0) {
+      r_dt$cnvs <- cnvs[1]
+      r_dt$empty_dt <- T
+    }
+    else {
+      r_dt$cnvs <- r_dt$cnvs[GT %in% r_dt$gt & vo %in% r_dt$vo &
+                        length >= r_dt$min_len & numsnp >= r_dt$min_snp, ]
+
+      r_dt$line <- r_dt$cnvs[r_dt$i]
+    }
   })
 
 
@@ -224,6 +236,10 @@ server <- function(input, output, session) {
              snps)
   }, width = function() input$pl_h * 1.2, height = function() input$pl_h)
 
+  output$empty_dt <- renderText({
+    if (r_dt$empty_dt) paste0('NO CNVs match the selected filters!!')
+    else ''
+  })
 
   # Save results when asked
 
