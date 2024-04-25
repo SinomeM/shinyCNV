@@ -122,12 +122,6 @@ server <- function(input, output, session) {
     r_dt$min_snp <- as.integer(input$min_snp)
   })
 
-  observeEvent(ignoreInit = T, list(input$vo_f, input$gt_f,
-                                    input$min_len, input$min_snp), {
-
-  })
-
-
   observeEvent(input$loc_chr, {
     r_dt$loc_chr <- as.integer(input$loc_chr)
   })
@@ -140,12 +134,6 @@ server <- function(input, output, session) {
     r_dt$loc_en <- as.integer(input$loc_en)
   })
 
-  observeEvent(ignoreInit = T, list(input$loc_chr, input$loc_st,
-                                    input$loc_en), {
-  })
-
-  observeEvent(input$loc_min_overlap, {
-  })
 
   observeEvent(input$run, {
     r_dt$cnvs <- cnvs
