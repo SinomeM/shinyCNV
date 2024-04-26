@@ -122,6 +122,10 @@ server <- function(input, output, session) {
     r_dt$min_len <- as.integer(input$min_len)
   })
 
+  observeEvent(input$max_len, {
+    r_dt$max_len <- as.integer(input$max_len)
+  })
+
   observeEvent(input$min_snp, {
     r_dt$min_snp <- as.integer(input$min_snp)
   })
