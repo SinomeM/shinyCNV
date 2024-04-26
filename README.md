@@ -48,7 +48,7 @@ Warning: Error in if: missing value where TRUE/FALSE needed
   1: <Anonymous>
 ```
 
-then it means there are nor CNVs in the selected locus with the current
+then it means there are no CNVs in the selected locus with the current
 filters set. If the SNPs and length filters results in an empty table,
 a message will appear in the middle of the plot.
 
@@ -81,4 +81,11 @@ Linux dependencies:
 
 - tabix
 - a browser
+
+
+## Citation
+
+If you use this tool in your work please cite "Accurate and Effective
+Detection of Recurrent Copy Number Variants in Large SNP Genotype Datasets",
+DOI: [https://doi.org/10.1002/cpz1.621]( https://doi.org/10.1002/cpz1.6210).
 
