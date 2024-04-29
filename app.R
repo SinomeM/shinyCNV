@@ -151,7 +151,7 @@ server <- function(input, output, session) {
       lloc <- data.table(locus = input$locus, chr = r_dt$loc_chr,
                          start = r_dt$loc_st, end = r_dt$loc_en)
       r_dt$cnvs <- QCtreeCNV::select_stitch_calls(r_dt$cnvs, lloc,
-                                                  minoverlap = 0)
+                                                  minoverlap = 0, minsnp = 10)
       if (nrow(r_dt$cnvs) != 0) {
         r_dt$cnvs[, ':=' (loc_st = lloc$start, loc_en = lloc$end)]
         r_dt$cnvs[, c('gap', 'stitch', 'densnp') := NULL]
