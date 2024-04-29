@@ -139,6 +139,12 @@ load_snps_tbx <- function(cnv, samp, snps = NULL, in_out_ratio = 1, adjusted_lrr
   end <- cnv$end
   len <- end - start + 1
   tbx_path <- samp$file_path_tabix
+  
+  if ('locus' %in% colnames(cnv)) {
+    start <- cnv$loc_st
+    end <- cnv$loc_en
+    len <- end - start + 1
+  }
 
   st <- start - (in_out_ratio*len)
   st <- ifelse(st < 0, 0, st)
