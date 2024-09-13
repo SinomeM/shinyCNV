@@ -9,6 +9,13 @@ described in details
 [here](https://currentprotocols.onlinelibrary.wiley.com/doi/10.1002/cpz1.621).
 
 
+## Citation
+
+If you use this tool in your work please cite "Accurate and Effective
+Detection of Recurrent Copy Number Variants in Large SNP Genotype Datasets",
+DOI: [https://doi.org/10.1002/cpz1.621]( https://doi.org/10.1002/cpz1.621).
+
+
 ## Interface
 
 The plot has three row:
@@ -81,11 +88,3 @@ Linux dependencies:
 
 - tabix
 - a browser
-
-
-## Citation
-
-If you use this tool in your work please cite "Accurate and Effective
-Detection of Recurrent Copy Number Variants in Large SNP Genotype Datasets",
-DOI: [https://doi.org/10.1002/cpz1.621]( https://doi.org/10.1002/cpz1.621).
-
