@@ -3,8 +3,6 @@
 # the two versions should be merged back
 
 
-
-
 plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
                      min_lrr = -1.4, max_lrr = 1.3,
                      # the following parameters should not be changed by most users
@@ -43,23 +41,9 @@ plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
     return(data.table())
   }
 
-
-  # bottom and middle row, move position to the x coordinates in the new system
-  # dt <- dt[between(position, ss, ee), ] # already done in load_snps_tbx()
-  dt[, x := round(((position-ss)/(ee-ss)) * w)]
-
   # each point need to be used for both lrr and baf so dt must be duplicated
   dt_lrr <- copy(dt)
   dt_baf <- dt
-
-  # move lrr and baf on hte y coordinates in the new system
-  dt_lrr[, y := round(((lrr-(min_lrr))/(max_lrr-(min_lrr))) * k1)]
-  dt_baf[, y := round(((baf-0)/(1-0)) * k1) + k1 + z]
-
-  # pixel coordinates must be > 0
-  dt_baf[, ':=' (x = x+1, y = y+1)]
-  dt_lrr[, ':=' (x = x+1, y = y+1)]
-
 
   # top row
   #  the top row is zoomed out by a factor of 3
@@ -84,6 +68,12 @@ plot_cnv <- function(cnv, samp, snps = NULL, adjusted_lrr = T,
   brr2 <- seq(from = ss2, to = ee2, length.out = 20)
   brr_l2 <- round(brr2/1000000, 1)
   brr_l2 <- ifelse(brr_l2 > 0, brr_l2, 0)
+
+
+  dt_lrr[lrr <= min_lrr, lrr := min_lrr+0.01]
+  dt_lrr[lrr >= max_lrr, lrr := max_lrr-0.01]
+  dt_big[lrr <= min_lrr, lrr := min_lrr+0.01]
+  dt_big[lrr >= max_lrr, lrr := max_lrr-0.01]
 
   # plot in the original space
     a <- ggplot(dt_lrr, aes(position, lrr)) + geom_point(alpha = 0.3, colour = 'red') +
