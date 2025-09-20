@@ -7,9 +7,12 @@
 
 wkdir=/users/sm/Documents/GitHub/shinyCNV
 cnvs=/users/sm/Documents/GitHub/shinyCNV/data/cnvs.txt
-samples=/users/sm/Documents/GitHub/shinyCNV/data/samples.txt
+samples=/users/sm/Documents/GitHub/shinyCNV/data/samples_list.txt
 snps=/users/sm/Documents/GitHub/shinyCNV/data/hd_1kG_hg19.snppos.filtered.gz
 
-cd $wkdir
+# Open a firefox window
+firefox  &> /dev/null
 
+# Launch the app
+cd $wkdir
 Rscript app.R $wkdir $cnvs $samples $snps

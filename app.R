@@ -12,9 +12,10 @@ if (!file.exists(cargs[2])) stop('CNVs table not found!')
 if (!file.exists(cargs[3])) stop('Samples table not found!')
 if (!file.exists(cargs[4])) stop('SNPs table not found!')
 
-# load data (CNVs, samples and SNPs) and initialise 'vo' column if necessary
+# Load data (CNVs, samples and SNPs) and initialise 'vo' column if necessary
 cnvs <- fread(cargs[2])
 if (!'vo' %in% colnames(cnvs)) cnvs[, vo := -9]
+# Also add empty columns if not present
 if (!'CN' %in% colnames(cnvs)) cnvs[, CN := NA]
 if (!'length' %in% colnames(cnvs)) cnvs[, length := -9]
 if (!'numsnp' %in% colnames(cnvs)) cnvs[, numsnp := -9]
