@@ -1,2 +1,2 @@
-hd_id	file_path	file_path_tabix	sample_ID
-5426511011_R02C01.txt	/faststorage/project/ukb_cnv_automated_validation/people/simonem/method_paper_update/1kgenomes_array/broad_intensities/final_report/splits//5426511011_R02C01.txt	/faststorage/project/ukb_cnv_automated_validation/people/simonem/method_paper_update/1kgenomes_array/tabix/ilmHD/5426511011_R02C01.txt.tabix.gz	NA19664
+file_path_tabix	sample_ID
+/Users/sm/Documents/GitHub/shinyCNV/data/5426511011_R02C01.txt.tabix.gz	NA19664

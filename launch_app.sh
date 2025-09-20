@@ -14,5 +14,4 @@ snps=/users/sm/Documents/GitHub/shinyCNV/data/hd_1kG_hg19.snppos.filtered.gz
 firefox  &> /dev/null
 
 # Launch the app
-cd $wkdir
 Rscript app.R $wkdir $cnvs $samples $snps
