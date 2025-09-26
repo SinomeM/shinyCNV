@@ -104,7 +104,7 @@ ui <- fluidPage(
         textInput('locus_chr', 'Locus Chromosome', ''),
         textInput('locus_start', 'Locus Start Position', ''),
         textInput('locus_end', 'Locus End Position', ''),
-        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0'),
+        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0')
       )
     ),
     # CNV table at the top of the main page
@@ -136,7 +136,8 @@ ui <- fluidPage(
 
 # The main function of the server is to filter the CNV table if needed, load
 # one CNV line and create the plot. The plot needs to be interactive, meaning it
-# must be possible to zoom in and out. The plot is made of two panels, showing the
+# must be possible to zoom in and out and each dot can be selected clicking on it.
+# The plot is made of two panels, showing the
 # LRR and BAF values for each SNP in the region respectively. The CNVs coordinates
 # are marked with horizontal dashed lines. If a fixed locus in selected,
 # the locus boundaries are also marked with vertical dashed lines.
@@ -144,14 +145,86 @@ ui <- fluidPage(
 # The boundaries updating functionalist will be added later
 
 server <- function(input, output, session) {
+  # 1. Reactive values to store state
+  r_state <- reactiveValues(
+    cnvs = cnvs,
+    filtered_cnvs = cnvs,
+    current_idx = 1
+  )
+
+  # 2. Filtering logic
+  observeEvent(
+    {
+      input$vo_filter
+      input$gt_filter
+      input$min_len_filter
+      input$max_len_filter
+      input$min_snp_filter
+      input$locus_chr
+      input$locus_start
+      input$locus_end
+      input$min_overlap
+    },
+    {
+      # TODO: Implement filtering logic here
+      # Update r_state$filtered_cnvs based on filters
+      # Reset r_state$current_idx to 1 if needed
+    }
+  )
+
+  # 3. Navigation logic
+  observeEvent(input$next, {
+    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
+      r_state$current_idx <- r_state$current_idx + 1
+    }
+  })
+  observeEvent(input$prev, {
+    if (r_state$current_idx > 1) {
+      r_state$current_idx <- r_state$current_idx - 1
+    }
+  })
+  observeEvent(input$true, {
+    idx <- r_state$current_idx
+    row <- r_state$filtered_cnvs[idx, ]
+    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := 1]
+    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
+      r_state$current_idx <- r_state$current_idx + 1
+    }
+  })
+  observeEvent(input$false, {
+    idx <- r_state$current_idx
+    row <- r_state$filtered_cnvs[idx, ]
+    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := 2]
+    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
+      r_state$current_idx <- r_state$current_idx + 1
+    }
+  })
+  observeEvent(input$unk, {
+    idx <- r_state$current_idx
+    row <- r_state$filtered_cnvs[idx, ]
+    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := 3]
+    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
+      r_state$current_idx <- r_state$current_idx + 1
+    }
+  })
+  observeEvent(input$err, {
+    idx <- r_state$current_idx
+    row <- r_state$filtered_cnvs[idx, ]
+    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := -7]
+    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
+      r_state$current_idx <- r_state$current_idx + 1
+    }
+  })
+
+# 4. CNV table
   output$cnv_table <- renderDT({
     datatable(
-      cnvs[1],
+      r_state$filtered_cnvs[r_state$current_idx],
       class = 'cell-border stripe',
       options = list(dom = "t", paging = FALSE, info = FALSE, searching = FALSE),
-      rownames = F)
-    })
-
+      rownames = F
+    )
+  })
 }
 
 
