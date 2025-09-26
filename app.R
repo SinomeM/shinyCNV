@@ -92,7 +92,7 @@ ui <- fluidPage(
       fluidRow(
         h6('Filter the CNV table'),
         selectInput('vo_filter', 'Filter CNV previous VI',
-                    c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
+                    c('new', 'true', 'false', 'unkown', 'all'), 'all'),
         selectInput('gt_filter', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
         textInput("min_len_filter", "Minimum CNV length", '0'),
         textInput("max_len_filter", "Maximum CNV length", '10000000'),
@@ -104,7 +104,8 @@ ui <- fluidPage(
         textInput('locus_chr', 'Locus Chromosome', ''),
         textInput('locus_start', 'Locus Start Position', ''),
         textInput('locus_end', 'Locus End Position', ''),
-        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0')
+        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0'),
+        actionButton('run_filtering', 'Run Filtering')
       )
     ),
     # CNV table at the top of the main page
@@ -122,8 +123,8 @@ ui <- fluidPage(
         actionButton("false", "False", class = "btn-danger"),
         actionButton("unk", "Unkown", class = 'btn-warning'),
         actionButton("err", "Error"),
-        actionButton("prev", "Previous", class = "btn-default"),
-        actionButton("next", "Next", class = "btn-default"),
+        actionButton("prv", "Previous", class = "btn-default"),
+        actionButton("nxt", "Next", class = "btn-default"),
         textOutput('progress')
       )
     )
@@ -142,91 +143,145 @@ ui <- fluidPage(
 # are marked with horizontal dashed lines. If a fixed locus in selected,
 # the locus boundaries are also marked with vertical dashed lines.
 
-# The boundaries updating functionalist will be added later
+# The boundaries updating functionalities will be added later
 
 server <- function(input, output, session) {
-  # 1. Reactive values to store state
+  # 1. Initialize reactive values
   r_state <- reactiveValues(
-    cnvs = cnvs,
-    filtered_cnvs = cnvs,
-    current_idx = 1
+    cnvs = cnvs,                    # original CNV table
+    filtered_cnvs = cnvs,           # filtered version
+    current_idx = 1                 # current CNV index
   )
 
   # 2. Filtering logic
-  observeEvent(
-    {
-      input$vo_filter
-      input$gt_filter
-      input$min_len_filter
-      input$max_len_filter
-      input$min_snp_filter
-      input$locus_chr
-      input$locus_start
-      input$locus_end
-      input$min_overlap
-    },
-    {
-      # TODO: Implement filtering logic here
-      # Update r_state$filtered_cnvs based on filters
-      # Reset r_state$current_idx to 1 if needed
+  observeEvent(input$run_filtering, {
+    filtered <- r_state$cnvs
+    
+    # Apply filters based on input values
+    if (!is.null(input$min_len_filter)) {
+      filtered <- filtered[length >= input$min_len_filter]
     }
-  )
+    if (!is.null(input$max_len_filter)) {
+      filtered <- filtered[length <= input$max_len_filter]
+    }
+    if (!is.null(input$min_snp_filter)) {
+      filtered <- filtered[numsnp >= input$min_snp_filter]
+    }
+    if (!is.null(input$gt_filter)) {
+      if (input$gt_filter == 'dels') {
+        filtered <- filtered[GT == 1]
+      } else if (input$gt_filter == 'dups') {
+        filtered <- filtered[GT == 2]
+      }
+    }
+    if (!is.null(input$vo_filter)) {
+      if (input$vo_filter == 'new') {
+        filtered <- filtered[vo == -9]
+      } else if (input$vo_filter == 'true') {
+        filtered <- filtered[vo == 1]
+      } else if (input$vo_filter == 'false') {
+        filtered <- filtered[vo == 2]
+      } else if (input$vo_filter == 'unkown') {
+        filtered <- filtered[vo == 3]
+      }
+    }
+    
+    # Update filtered table and reset index
+    r_state$filtered_cnvs <- filtered
+    r_state$current_idx <- 1
+  })
 
-  # 3. Navigation logic
-  observeEvent(input$next, {
+  # 3. Navigation and validation logic
+  observeEvent(input$nxt, {
     if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
-  observeEvent(input$prev, {
+  observeEvent(input$prv, {
     if (r_state$current_idx > 1) {
       r_state$current_idx <- r_state$current_idx - 1
     }
   })
+
+  # Validation buttons
   observeEvent(input$true, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx, ]
-    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := 1]
+    row <- r_state$filtered_cnvs[idx]
+    r_state$cnvs[sample_ID == row$sample_ID & 
+                 chr == row$chr & 
+                 start == row$start & 
+                 end == row$end, 
+                 vo := 1]
     if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
   observeEvent(input$false, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx, ]
-    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := 2]
+    row <- r_state$filtered_cnvs[idx]
+    r_state$cnvs[sample_ID == row$sample_ID & 
+                 chr == row$chr & 
+                 start == row$start & 
+                 end == row$end, 
+                 vo := 2]
     if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
   observeEvent(input$unk, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx, ]
-    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := 3]
+    row <- r_state$filtered_cnvs[idx]
+    r_state$cnvs[sample_ID == row$sample_ID & 
+                 chr == row$chr & 
+                 start == row$start & 
+                 end == row$end, 
+                 vo := 3]
     if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
   observeEvent(input$err, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx, ]
-    r_state$cnvs[sample_ID == row$sample_ID & chr == row$chr & start == row$start & end == row$end, vo := -7]
+    row <- r_state$filtered_cnvs[idx]
+    r_state$cnvs[sample_ID == row$sample_ID & 
+                 chr == row$chr & 
+                 start == row$start & 
+                 end == row$end, 
+                 vo := -7]
     if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
 
-# 4. CNV table
+  # 4. Render current CNV table row
   output$cnv_table <- renderDT({
+    current_row <- r_state$filtered_cnvs[r_state$current_idx]
     datatable(
-      r_state$filtered_cnvs[r_state$current_idx],
-      class = 'cell-border stripe',
-      options = list(dom = "t", paging = FALSE, info = FALSE, searching = FALSE),
-      rownames = F
+      current_row,
+      options = list(dom = 't', 
+                    paging = FALSE,
+                    searching = FALSE,
+                    info = FALSE),
+      rownames = FALSE
     )
   })
-}
 
+  # 5. Progress text
+  output$progress <- renderText({
+    sprintf("CNV %d out of %d", 
+            r_state$current_idx,
+            nrow(r_state$filtered_cnvs))
+  })
+
+  # 6. Placeholder plot
+  output$cnv_plot <- renderPlot({
+    plot(1:10, 1:10, 
+         main = sprintf("CNV Plot Placeholder (CNV #%d)", 
+                       r_state$current_idx),
+         xlab = "Position",
+         ylab = "Value")
+  })
+}
 
 # Run the app ----
 shinyApp(ui = ui, server = server)
