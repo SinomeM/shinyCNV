@@ -77,11 +77,10 @@ ui <- fluidPage(
   # Sidebar layout, contains filtering and settings
   layout_sidebar(
     sidebar = sidebar(
-      title = 'Filters CNVs, Select locus and Settings',
       position = 'left',
       # Various settings
       fluidRow(
-        h6('Settings'),
+        h4('Settings'),
         textInput('project_name', 'Project Name', ''),
         selectInput('snp_filtering', 'Filter SNPs based on input SNP table?',
                     c('yes', 'no'), 'yes'),
@@ -90,22 +89,22 @@ ui <- fluidPage(
       ),
       # CNVs filtering
       fluidRow(
-        h6('Filter the CNV table'),
+        h4('Filter the CNV table'),
         selectInput('vo_filter', 'Filter CNV previous VI',
                     c('new', 'true', 'false', 'unkown', 'all'), 'all'),
         selectInput('gt_filter', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
         textInput("min_len_filter", "Minimum CNV length", '0'),
         textInput("max_len_filter", "Maximum CNV length", '10000000'),
-        textInput("min_snp_filter", "Minimum number of SNPs", '0')
+        textInput("min_snp_filter", "Minimum number of SNPs", '0'),
+        actionButton('run_filtering', 'Run Filtering', class = 'btn-primary')
       ),
       # Fixed locus
       fluidRow(
-        h6('Select fixed locus'),
+        h4('Select fixed locus'),
         textInput('locus_chr', 'Locus Chromosome', ''),
         textInput('locus_start', 'Locus Start Position', ''),
         textInput('locus_end', 'Locus End Position', ''),
-        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0'),
-        actionButton('run_filtering', 'Run Filtering')
+        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0')
       )
     ),
     # CNV table at the top of the main page
@@ -156,36 +155,41 @@ server <- function(input, output, session) {
   # 2. Filtering logic
   observeEvent(input$run_filtering, {
     filtered <- r_state$cnvs
-    
+
+    # Convert inputs to numeric and check if they are valid
+    min_len <- as.numeric(input$min_len_filter)
+    max_len <- as.numeric(input$max_len_filter)
+    min_snp <- as.numeric(input$min_snp_filter)
+
     # Apply filters based on input values
     if (!is.null(input$min_len_filter)) {
-      filtered <- filtered[length >= input$min_len_filter]
+      filtered <- filtered[length >= min_len]
     }
     if (!is.null(input$max_len_filter)) {
-      filtered <- filtered[length <= input$max_len_filter]
+      filtered <- filtered[length <= max_len]
     }
     if (!is.null(input$min_snp_filter)) {
-      filtered <- filtered[numsnp >= input$min_snp_filter]
+      filtered <- filtered[numsnp >= min_snp]
     }
     if (!is.null(input$gt_filter)) {
       if (input$gt_filter == 'dels') {
-        filtered <- filtered[GT == 1]
+        filtered <- filtered[GT == 1, ]
       } else if (input$gt_filter == 'dups') {
-        filtered <- filtered[GT == 2]
+        filtered <- filtered[GT == 2, ]
       }
     }
     if (!is.null(input$vo_filter)) {
       if (input$vo_filter == 'new') {
-        filtered <- filtered[vo == -9]
+        filtered <- filtered[vo == -9, ]
       } else if (input$vo_filter == 'true') {
-        filtered <- filtered[vo == 1]
+        filtered <- filtered[vo == 1, ]
       } else if (input$vo_filter == 'false') {
-        filtered <- filtered[vo == 2]
+        filtered <- filtered[vo == 2, ]
       } else if (input$vo_filter == 'unkown') {
-        filtered <- filtered[vo == 3]
+        filtered <- filtered[vo == 3, ]
       }
     }
-    
+
     # Update filtered table and reset index
     r_state$filtered_cnvs <- filtered
     r_state$current_idx <- 1
