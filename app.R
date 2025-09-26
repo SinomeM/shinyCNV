@@ -25,10 +25,12 @@
 #  - Ability to toggle the SNPs filtering on and off
 #  - Other minor improvements
 
-library(data.table)
-library(ggplot2)
-library(shiny)
+library(DT)
 library(bslib)
+library(shiny)
+library(ggplot2)
+library(data.table)
+
 
 # Set this to true when running from command line
 if (F) {
@@ -56,8 +58,8 @@ if (T) {
 # Initialise 'vo' column if necessary and add empty columns if not present
 if (!'vo' %in% colnames(cnvs)) cnvs[, vo := -9]
 if (!'CN' %in% colnames(cnvs)) cnvs[, CN := NA]
-if (!'length' %in% colnames(cnvs)) cnvs[, length := -9]
-if (!'numsnp' %in% colnames(cnvs)) cnvs[, numsnp := -9]
+if (!'length' %in% colnames(cnvs)) cnvs[, length := end-start+1]
+if (!'numsnp' %in% colnames(cnvs)) cnvs[, numsnp := NA]
 cnvs <- cnvs[, .(sample_ID, chr, start, end, numsnp, length, GT, CN, vo)]
 setorder(cnvs, chr, start)
 
@@ -71,11 +73,60 @@ setorder(cnvs, chr, start)
 
 # In the sidebar, there are options to filter CNVs, change plot height etc
 
-ui <- page_sidebar(
-  title = 'CNVs Visual Validation',
-  sidebar = sidebar(
-    title = 'Filters CNVs, Select locus and Settings',
-    position = 'left'
+ui <- fluidPage(
+  # Sidebar layout, contains filtering and settings
+  layout_sidebar(
+    sidebar = sidebar(
+      title = 'Filters CNVs, Select locus and Settings',
+      position = 'left',
+      # Various settings
+      fluidRow(
+        h6('Settings'),
+        textInput('project_name', 'Project Name', ''),
+        selectInput('snp_filtering', 'Filter SNPs based on input SNP table?',
+                    c('yes', 'no'), 'yes'),
+        sliderInput('plot_height', 'Change plot height',
+                    min = 400, max = 1000, value = 750, step = 50)
+      ),
+      # CNVs filtering
+      fluidRow(
+        h6('Filter the CNV table'),
+        selectInput('vo_filter', 'Filter CNV previous VI',
+                    c('new', 'true', 'false', 'unk', 'other', 'all'), 'all'),
+        selectInput('gt_filter', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
+        textInput("min_len_filter", "Minimum CNV length", '0'),
+        textInput("max_len_filter", "Maximum CNV length", '10000000'),
+        textInput("min_snp_filter", "Minimum number of SNPs", '0')
+      ),
+      # Fixed locus
+      fluidRow(
+        h6('Select fixed locus'),
+        textInput('locus_chr', 'Locus Chromosome', ''),
+        textInput('locus_start', 'Locus Start Position', ''),
+        textInput('locus_end', 'Locus End Position', ''),
+        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0'),
+      )
+    ),
+    # CNV table at the top of the main page
+    div(
+      DTOutput('cnv_table')
+    ),
+    # CNV plot
+    div(
+       plotOutput('cnv_plot')
+    ),
+    # Buttons to validate CNVs and move around
+    div(
+      fluidRow(
+        actionButton("true", "True", class = "btn-success"),
+        actionButton("false", "False", class = "btn-danger"),
+        actionButton("unk", "Unkown", class = 'btn-warning'),
+        actionButton("err", "Error"),
+        actionButton("prev", "Previous", class = "btn-default"),
+        actionButton("next", "Next", class = "btn-default"),
+        textOutput('progress')
+      )
+    )
   )
 )
 
@@ -93,5 +144,16 @@ ui <- page_sidebar(
 # The boundaries updating functionalist will be added later
 
 server <- function(input, output, session) {
-  
+  output$cnv_table <- renderDT({
+    datatable(
+      cnvs[1],
+      class = 'cell-border stripe',
+      options = list(dom = "t", paging = FALSE, info = FALSE, searching = FALSE),
+      rownames = F)
+    })
+
 }
+
+
+# Run the app ----
+shinyApp(ui = ui, server = server)
