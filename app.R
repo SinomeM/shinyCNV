@@ -52,7 +52,7 @@ if (F) {
 if (T) {
   cnvs <- fread('./data/cnvs.txt')
   samples <- fread('data/samples_list.txt')
-  snps <- fread('data/hd_1kG_hg19.snppos.filtered.gz')
+  snps <- fread('data/hd_1kG_hg19.snppos.filtered.test.gz')
   snps[, ':=' (Name = as.character(Name),
               Chr = as.character(Chr),
               Position = as.integer(Position))]
