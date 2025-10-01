@@ -53,6 +53,9 @@ if (T) {
   cnvs <- fread('./data/cnvs.txt')
   samples <- fread('data/samples_list.txt')
   snps <- fread('data/hd_1kG_hg19.snppos.filtered.gz')
+  snps[, ':=' (Name = as.character(Name),
+              Chr = as.character(Chr),
+              Position = as.integer(Position))]
 }
 
 # Initialise 'vo' column if necessary and add empty columns if not present
@@ -280,8 +283,9 @@ server <- function(input, output, session) {
 
   # 6. Helper function to load SNPs for a sample and chromosome using tabix
   load_sample_snps <- function(tabix_path, chr) {
-    # Use system tabix to extract SNPs for the chromosome (UPDATE COMMAND)
-    cmd <- sprintf("tabix %s %s", shQuote(tabix_path), shQuote(chr))
+    # Use system tabix to extract SNPs for the chromosome
+    cmd <- paste0("tabix ", tabix_path, " ", chr, ":", 0,
+                          "-", 275000000) # 275 Mbp is larger than chromosome 1
     snp_dt <- tryCatch({
       fread(cmd = cmd, header = FALSE)
     }, error = function(e) {
@@ -290,8 +294,23 @@ server <- function(input, output, session) {
     # Assign column names if data is present
     if (ncol(snp_dt) >= 6) {
       setnames(snp_dt, c("chr", "start", "end", "LRR", "BAF", "LRR_adj"))
+      snp_dt[, ':=' (chr = as.character(chr),
+                     start = as.numeric(start),
+                     end = as.numeric(end),
+                     LRR = as.numeric(LRR),
+                     BAF = as.numeric(BAF),
+                     LRR_adj = as.numeric(LRR_adj))]
     }
-    snp_dt
+    if (ncol(snp_dt) == 5) {
+      setnames(snp_dt, c("chr", "start", "end", "LRR", "BAF"))
+      snp_dt[, ':=' (chr = as.character(chr),
+                     start = as.numeric(start),
+                     end = as.numeric(end),
+                     LRR = as.numeric(LRR),
+                     BAF = as.numeric(BAF))]
+    }
+
+    return(unique(snp_dt))
   }
 
   # 7. CNV plot
@@ -312,14 +331,28 @@ server <- function(input, output, session) {
     # Load SNPs for the sample and chromosome
     snp_dt <- load_sample_snps(tabix_path, chr)
 
-    # Placeholder plot for LRR and BAF
-    par(mfrow = c(2, 1))
-    plot(snp_dt$start, snp_dt$LRR, pch = 20, col = "blue",
-         main = "LRR values", xlab = "Position", ylab = "LRR")
-    abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
-    plot(snp_dt$start, snp_dt$BAF, pch = 20, col = "green",
-         main = "BAF values", xlab = "Position", ylab = "BAF")
-    abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
+    snps_chr <- snps[Chr == chr, ]
+
+    # Filter snp_dt based on input$snp_filtering
+    if (!is.null(input$snp_filtering) & input$snp_filtering == "yes") {
+      snp_dt <- snp_dt[start %in% unique(snps_chr[, unique(Position)]), ]
+    }
+
+    if (snp_dt[,.N] == 0) {
+      plot.new()
+      title("No SNP data available for this sample and chromosome")
+      return()
+    }
+    else {
+      # Placeholder plot for LRR and BAF (REMEBER TO MOVE TO LRR_ADJ IF PRESENT)
+      par(mfrow = c(2, 1))
+      plot(snp_dt$start, snp_dt$LRR, pch = 20, col = "blue",
+           main = "LRR values", xlab = "Position", ylab = "LRR")
+      abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
+      plot(snp_dt$start, snp_dt$BAF, pch = 20, col = "green",
+           main = "BAF values", xlab = "Position", ylab = "BAF")
+      abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
+    }
   })
 }
 
