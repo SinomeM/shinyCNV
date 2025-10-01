@@ -272,18 +272,54 @@ server <- function(input, output, session) {
 
   # 5. Progress text
   output$progress <- renderText({
-    sprintf("CNV %d out of %d", 
-            r_state$current_idx,
-            nrow(r_state$filtered_cnvs))
+    total <- nrow(r_state$filtered_cnvs)
+    idx <- r_state$current_idx
+    percent <- if (total > 0) round(100 * (idx-1) / total, 1) else 0
+    sprintf("CNV %d out of %d (%.1f%%)", idx, total, percent)
   })
 
-  # 6. Placeholder plot
+  # 6. Helper function to load SNPs for a sample and chromosome using tabix
+  load_sample_snps <- function(tabix_path, chr) {
+    # Use system tabix to extract SNPs for the chromosome (UPDATE COMMAND)
+    cmd <- sprintf("tabix %s %s", shQuote(tabix_path), shQuote(chr))
+    snp_dt <- tryCatch({
+      fread(cmd = cmd, header = FALSE)
+    }, error = function(e) {
+      data.table() # return empty table on error
+    })
+    # Assign column names if data is present
+    if (ncol(snp_dt) >= 6) {
+      setnames(snp_dt, c("chr", "start", "end", "LRR", "BAF", "LRR_adj"))
+    }
+    snp_dt
+  }
+
+  # 7. CNV plot
   output$cnv_plot <- renderPlot({
-    plot(1:10, 1:10, 
-         main = sprintf("CNV Plot Placeholder (CNV #%d)", 
-                       r_state$current_idx),
-         xlab = "Position",
-         ylab = "Value")
+    # Get current CNV
+    cnv <- r_state$filtered_cnvs[r_state$current_idx]
+    if (is.null(cnv) || nrow(cnv) == 0) {
+      plot.new()
+      title("No CNV selected")
+      return()
+    }
+
+    # Get sample tabix file path
+    sample_row <- samples[sample_ID == cnv$sample_ID]
+    tabix_path <- sample_row$file_path_tabix
+    chr <- cnv$chr
+
+    # Load SNPs for the sample and chromosome
+    snp_dt <- load_sample_snps(tabix_path, chr)
+
+    # Placeholder plot for LRR and BAF
+    par(mfrow = c(2, 1))
+    plot(snp_dt$start, snp_dt$LRR, pch = 20, col = "blue",
+         main = "LRR values", xlab = "Position", ylab = "LRR")
+    abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
+    plot(snp_dt$start, snp_dt$BAF, pch = 20, col = "green",
+         main = "BAF values", xlab = "Position", ylab = "BAF")
+    abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
   })
 }
 
