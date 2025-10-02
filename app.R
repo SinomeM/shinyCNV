@@ -30,6 +30,7 @@ library(bslib)
 library(shiny)
 library(ggplot2)
 library(data.table)
+library(plotly)
 
 
 # Set this to true when running from command line
@@ -116,7 +117,8 @@ ui <- fluidPage(
     ),
     # CNV plot
     div(
-       plotOutput('cnv_plot')
+       #plotOutput('cnv_plot')
+       plotlyOutput('cnv_plot')
     ),
     # Buttons to validate CNVs and move around
     div(
@@ -324,8 +326,7 @@ server <- function(input, output, session) {
     }
 
     # Get sample tabix file path
-    sample_row <- samples[sample_ID == cnv$sample_ID]
-    tabix_path <- sample_row$file_path_tabix
+    tabix_path <- samples[sample_ID == cnv$sample_ID, file_path_tabix]
     chr <- cnv$chr
 
     # Load SNPs for the sample and chromosome
@@ -354,6 +355,72 @@ server <- function(input, output, session) {
       abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
     }
   })
+
+  # plotly version
+  output$cnv_plotly <- renderPlotly({
+    cnv <- r_state$filtered_cnvs[r_state$current_idx]
+    if (is.null(cnv) || nrow(cnv) == 0) {
+      return(plotly_empty())
+    }
+
+    tabix_path <- samples[sample_ID == cnv$sample_ID, file_path_tabix]
+    chr <- cnv$chr
+
+    # Load SNPs for the sample and chromosome
+    snp_dt <- load_sample_snps(tabix_path, chr)
+    snps_chr <- snps[Chr == chr, ]
+
+    if (!is.null(input$snp_filtering) && input$snp_filtering == "yes") {
+      snp_dt <- snp_dt[start %in% unique(snps_chr[, unique(Position)]), ]
+    }
+
+    # Empty plot if no snps are left
+    if (nrow(snp_dt) == 0) return(plotly_empty())
+
+    # Use LRR_adj if present, else LRR
+    lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
+
+    if (F) {
+      # LRR plot
+      p1 <- plot_ly(
+        snp_dt, x = ~start, y = as.formula(paste0("~", lrr_col)),
+        type = "scatter", mode = "markers",
+        marker = list(color = "blue"),
+        text = ~paste("Position:", start, "<br>LRR:", get(lrr_col)),
+        hoverinfo = "text"
+      ) |>
+        layout(
+          title = "LRR values",
+          shapes = list(
+            list(type = "line", x0 = cnv$start, x1 = cnv$start, y0 = min(snp_dt[[lrr_col]], na.rm=TRUE), y1 = max(snp_dt[[lrr_col]], na.rm=TRUE), line = list(dash = "dash", color = "red")),
+            list(type = "line", x0 = cnv$end, x1 = cnv$end, y0 = min(snp_dt[[lrr_col]], na.rm=TRUE), y1 = max(snp_dt[[lrr_col]], na.rm=TRUE), line = list(dash = "dash", color = "red"))
+          )
+        )
+
+      # BAF plot
+      p2 <- plot_ly(
+        snp_dt, x = ~start, y = ~BAF,
+        type = "scatter", mode = "markers",
+        marker = list(color = "green"),
+        text = ~paste("Position:", start, "<br>BAF:", BAF),
+        hoverinfo = "text"
+      ) |>
+        layout(
+          title = "BAF values",
+          shapes = list(
+            list(type = "line", x0 = cnv$start, x1 = cnv$start, y0 = min(snp_dt$BAF, na.rm=TRUE), y1 = max(snp_dt$BAF, na.rm=TRUE), line = list(dash = "dash", color = "red")),
+            list(type = "line", x0 = cnv$end, x1 = cnv$end, y0 = min(snp_dt$BAF, na.rm=TRUE), y1 = max(snp_dt$BAF, na.rm=TRUE), line = list(dash = "dash", color = "red"))
+          )
+        )
+      subplot(p1, p2, nrows = 2, shareX = TRUE, titleY = TRUE)
+    }
+
+    pl_test <- ggplot2(snp_dt, aes(x = start, y = LRR_adj)) +
+      geom_point(alpha = 0.3) +
+      theme_bw()
+    pl_test
+  })
+
 }
 
 # Run the app ----
