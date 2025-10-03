@@ -2,17 +2,17 @@ library(ggplot2)
 library(data.table)
 library(plotly)
 
-cnvs <- fread('./data/cnvs.txt')
-samples <- fread('data/samples_list.txt')
-snps <- fread('data/hd_1kG_hg19.snppos.filtered.test.gz')
-snps[, ':=' (Name = as.character(Name),
-            Chr = as.character(Chr),
-            Position = as.integer(Position))]
+cnvs <- fread("./data/cnvs.txt")
+samples <- fread("data/samples_list.txt")
+snps <- fread("data/hd_1kG_hg19.snppos.filtered.test.gz")
+snps[, ":=" (Name = as.character(Name),
+             Chr = as.character(Chr),
+             Position = as.integer(Position))]
 
 load_sample_snps <- function(tabix_path, chr) {
   # Use system tabix to extract SNPs for the chromosome
   cmd <- paste0("tabix ", tabix_path, " ", chr, ":", 0,
-                        "-", 275000000) # 275 Mbp is larger than chromosome 1
+                "-", 275000000) # 275 Mbp is larger than chromosome 1 # nolint
   snp_dt <- tryCatch({
     fread(cmd = cmd, header = FALSE)
   }, error = function(e) {
@@ -21,7 +21,7 @@ load_sample_snps <- function(tabix_path, chr) {
   # Assign column names if data is present
   if (ncol(snp_dt) >= 6) {
     setnames(snp_dt, c("chr", "start", "end", "LRR", "BAF", "LRR_adj"))
-    snp_dt[, ':=' (chr = as.character(chr),
+    snp_dt[, ":=" (chr = as.character(chr),
                    start = as.numeric(start),
                    end = as.numeric(end),
                    LRR = as.numeric(LRR),
@@ -30,7 +30,7 @@ load_sample_snps <- function(tabix_path, chr) {
   }
   if (ncol(snp_dt) == 5) {
     setnames(snp_dt, c("chr", "start", "end", "LRR", "BAF"))
-    snp_dt[, ':=' (chr = as.character(chr),
+    snp_dt[, ":=" (chr = as.character(chr),
                    start = as.numeric(start),
                    end = as.numeric(end),
                    LRR = as.numeric(LRR),
