@@ -40,7 +40,7 @@ load_sample_snps <- function(tabix_path, chr) {
 }
 
 i <- 1
-cnv <- r_state$filtered_cnvs[i]
+cnv <- cnvs[i]
 
 tabix_path <- samples[sample_ID == cnv$sample_ID, file_path_tabix]
 chr <- cnv$chr
@@ -48,3 +48,18 @@ chr <- cnv$chr
 # Load SNPs for the sample and chromosome
 snp_dt <- load_sample_snps(tabix_path, chr)
 snps_chr <- snps[Chr == chr, ]
+
+pl <- ggplot(snp_dt, aes(x = start, y = LRR_adj)) +
+        geom_point() + theme_bw()
+ggplotly(pl)
+
+ply <- plot_ly(snp_dt, x = ~start, y = ~LRR_adj,
+               type = "scatter", mode = "markers",
+               marker = list(color = "black", opacity = 0.5),
+               text = ~paste("Position:", start, "<br>LRR:", LRR_adj),
+               hoverinfo = "text") |>
+  layout(
+    xaxis = list(range = c(24e6, 25e6)),
+    yaxis = list(range = c(-2, 2), fixedrange = TRUE)
+  )
+ply

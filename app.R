@@ -118,7 +118,7 @@ ui <- fluidPage(
     # CNV plot
     div(
        #plotOutput('cnv_plot')
-       plotlyOutput('cnv_plot')
+       plotlyOutput('cnv_plotly')
     ),
     # Buttons to validate CNVs and move around
     div(
@@ -380,7 +380,6 @@ server <- function(input, output, session) {
     # Use LRR_adj if present, else LRR
     lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
 
-    if (F) {
       # LRR plot
       p1 <- plot_ly(
         snp_dt, x = ~start, y = as.formula(paste0("~", lrr_col)),
@@ -388,14 +387,7 @@ server <- function(input, output, session) {
         marker = list(color = "blue"),
         text = ~paste("Position:", start, "<br>LRR:", get(lrr_col)),
         hoverinfo = "text"
-      ) |>
-        layout(
-          title = "LRR values",
-          shapes = list(
-            list(type = "line", x0 = cnv$start, x1 = cnv$start, y0 = min(snp_dt[[lrr_col]], na.rm=TRUE), y1 = max(snp_dt[[lrr_col]], na.rm=TRUE), line = list(dash = "dash", color = "red")),
-            list(type = "line", x0 = cnv$end, x1 = cnv$end, y0 = min(snp_dt[[lrr_col]], na.rm=TRUE), y1 = max(snp_dt[[lrr_col]], na.rm=TRUE), line = list(dash = "dash", color = "red"))
-          )
-        )
+      )
 
       # BAF plot
       p2 <- plot_ly(
@@ -404,21 +396,10 @@ server <- function(input, output, session) {
         marker = list(color = "green"),
         text = ~paste("Position:", start, "<br>BAF:", BAF),
         hoverinfo = "text"
-      ) |>
-        layout(
-          title = "BAF values",
-          shapes = list(
-            list(type = "line", x0 = cnv$start, x1 = cnv$start, y0 = min(snp_dt$BAF, na.rm=TRUE), y1 = max(snp_dt$BAF, na.rm=TRUE), line = list(dash = "dash", color = "red")),
-            list(type = "line", x0 = cnv$end, x1 = cnv$end, y0 = min(snp_dt$BAF, na.rm=TRUE), y1 = max(snp_dt$BAF, na.rm=TRUE), line = list(dash = "dash", color = "red"))
-          )
-        )
-      subplot(p1, p2, nrows = 2, shareX = TRUE, titleY = TRUE)
-    }
+      )
 
-    pl_test <- ggplot2(snp_dt, aes(x = start, y = LRR_adj)) +
-      geom_point(alpha = 0.3) +
-      theme_bw()
-    pl_test
+      subplot(p1, p2, nrows = 2, shareX = TRUE, titleY = TRUE)
+
   })
 
 }
