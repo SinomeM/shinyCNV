@@ -348,32 +348,62 @@ server <- function(input, output, session) {
     # Use LRR_adj if present, else LRR
     lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
 
-      # LRR plot
-      p1 <- plot_ly(
-        snp_dt, x = ~start, y = as.formula(paste0("~", lrr_col)),
-        type = "scatter", mode = "markers",
-        marker = list(color = "blue"),
-        text = ~paste("Position:", start, "<br>LRR:", get(lrr_col)),
-        hoverinfo = "text"
-      ) %>%
-        layout(
-          yaxis = list(range = c(-1.5, 1.5), fixedrange = TRUE, title = "LRR")
+    # Default zoom window: CNV ± 8 lengths (no SNPs discarded)
+    cnv_len <- if (!is.na(cnv$length)) cnv$length else (cnv$end - cnv$start + 1)
+    flank <- 8 * cnv_len
+    window_start <- max(cnv$start - flank, 0)
+    window_end <- cnv$end + flank
+
+    # LRR plot
+    p1 <- plot_ly(
+      snp_dt, x = ~start, y = as.formula(paste0("~", lrr_col)),
+      type = "scatter", mode = "markers",
+      name = "LRR",
+      marker = list(color = "red", opacity = 0.8),
+      text = ~paste("Position:", start, "<br>LRR:", get(lrr_col)),
+      hoverinfo = "text"
+    ) %>%
+      layout(
+        xaxis = list(range = c(window_start, window_end), autorange = FALSE),
+        yaxis = list(range = c(-1.5, 1.5), fixedrange = TRUE, title = "LRR"),
+        shapes = list(
+          list(
+            type = "rect",
+            xref = "x", x0 = cnv$start, x1 = cnv$end,
+            yref = "y", y0 = -1.5, y1 = 1.5,
+            fillcolor = "rgba(255, 0, 0, 0.15)",
+            line = list(width = 0)
+          )
         )
+      )
 
-      # BAF plot
-      p2 <- plot_ly(
-        snp_dt, x = ~start, y = ~BAF,
-        type = "scatter", mode = "markers",
-        marker = list(color = "green"),
-        text = ~paste("Position:", start, "<br>BAF:", BAF),
-        hoverinfo = "text"
-      ) %>%
-        layout(
-          yaxis = list(range = c(0, 1), fixedrange = TRUE, title = "BAF")
+    # BAF plot
+    p2 <- plot_ly(
+      snp_dt, x = ~start, y = ~BAF,
+      type = "scatter", mode = "markers",
+      name = "BAF",
+      marker = list(color = "blue", opacity = 0.8),
+      text = ~paste("Position:", start, "<br>BAF:", BAF),
+      hoverinfo = "text"
+    ) %>%
+      layout(
+        xaxis = list(range = c(window_start, window_end), autorange = FALSE),
+        yaxis = list(range = c(0, 1), fixedrange = TRUE, title = "BAF"),
+        shapes = list(
+          list(
+            type = "rect",
+            xref = "x", x0 = cnv$start, x1 = cnv$end,
+            yref = "y", y0 = 0, y1 = 1,
+            fillcolor = "rgba(0, 0, 255, 0.15)",
+            line = list(width = 0)
+          )
         )
+      )
 
-      subplot(p1, p2, nrows = 2, shareX = TRUE, titleY = TRUE)
+    fig <- subplot(p2, p1, nrows = 2, shareX = TRUE, titleY = TRUE) %>%
+      layout(dragmode = "pan")
 
+    fig
   })
 
 }
