@@ -51,6 +51,7 @@ if (F) {
 
 # For testing purposes only
 if (T) {
+  wkdir <- './tmp'
   cnvs <- fread('./data/cnvs.txt')
   samples <- fread('data/samples_list.txt')
   snps <- fread('data/hd_1kG_hg19.snppos.filtered.test.gz')
@@ -66,6 +67,10 @@ if (!'length' %in% colnames(cnvs)) cnvs[, length := end-start+1]
 if (!'numsnp' %in% colnames(cnvs)) cnvs[, numsnp := NA]
 cnvs <- cnvs[, .(sample_ID, chr, start, end, numsnp, length, GT, CN, vo)]
 setorder(cnvs, chr, start)
+
+# Check if the provided wkdir exists, if not create it (recursive set to
+# false, if it's needed it's likely the user made a mistake)
+if (!dir.exists(wkdir)) dir.create(wkdir, recursive = F)
 
 
 # UI function ----
@@ -129,6 +134,7 @@ ui <- fluidPage(
         actionButton("err", "Error"),
         actionButton("prv", "Previous", class = "btn-default"),
         actionButton("nxt", "Next", class = "btn-default"),
+        actionButton("ref", "Refine CNV coordinates", class = "btn-info"),
         textOutput('progress')
       )
     )
@@ -139,15 +145,10 @@ ui <- fluidPage(
 
 # Server function ----
 
-# The main function of the server is to filter the CNV table if needed, load
-# one CNV line and create the plot. The plot needs to be interactive, meaning it
-# must be possible to zoom in and out and each dot can be selected clicking on it.
-# The plot is made of two panels, showing the
-# LRR and BAF values for each SNP in the region respectively. The CNVs coordinates
-# are marked with horizontal dashed lines. If a fixed locus in selected,
-# the locus boundaries are also marked with vertical dashed lines.
-
-# The boundaries updating functionalities will be added later
+# Missing features:
+#  - ability to update CNV coordinates (start/end) and save changes
+#  - ability to save the CNV table to a file
+#  - fixed locus implementation
 
 server <- function(input, output, session) {
   # 1. Initialize reactive values
@@ -353,6 +354,12 @@ server <- function(input, output, session) {
     flank <- 8 * cnv_len
     window_start <- max(cnv$start - flank, 0)
     window_end <- cnv$end + flank
+
+    # Identify other CNVs on the same chromosome for this sample
+    other_cnvs <- r_state$cnvs[
+      sample_ID == cnv$sample_ID & chr == cnv$chr &
+        !(start == cnv$start & end == cnv$end)
+    ]
 
     # LRR plot
     p1 <- plot_ly(
