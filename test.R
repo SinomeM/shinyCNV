@@ -51,6 +51,7 @@ snps_chr <- snps[Chr == chr, ]
 
 pl <- ggplot(snp_dt, aes(x = start, y = LRR_adj)) +
         geom_point() + theme_bw()
+pl
 ggplotly(pl)
 
 ply <- plot_ly(snp_dt, x = ~start, y = ~LRR_adj,
