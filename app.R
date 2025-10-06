@@ -356,10 +356,30 @@ server <- function(input, output, session) {
     window_end <- cnv$end + flank
 
     # Identify other CNVs on the same chromosome for this sample
-    other_cnvs <- r_state$cnvs[
-      sample_ID == cnv$sample_ID & chr == cnv$chr &
-        !(start == cnv$start & end == cnv$end)
-    ]
+    all_cnvs <- r_state$cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
+
+    print(all_cnvs)
+
+    # create the CNVs outlines
+    lrr_outlines <- list()
+    baf_outlines <- list()
+    for (i in 1:all_cnvs[, .N]) {
+      line <- all_cnvs[i]
+      lrr_outlines[[i]] <- list(
+        type = "rect",
+        xref = "x", x0 = line$start, x1 = line$end,
+        yref = "y", y0 = -1.5, y1 = 1.5,
+        fillcolor = "rgba(255, 0, 0, 0.05)",
+        line = list(width = 0.2)
+      )
+      baf_outlines[[i]] <- list(
+        type = "rect",
+        xref = "x", x0 = line$start, x1 = line$end,
+        yref = "y", y0 = 0, y1 = 1,
+        fillcolor = "rgba(0, 0, 255, 0.05)",
+        line = list(width = 0.2)
+      )
+    }
 
     # LRR plot
     p1 <- plot_ly(
@@ -373,15 +393,7 @@ server <- function(input, output, session) {
       layout(
         xaxis = list(range = c(window_start, window_end), autorange = FALSE),
         yaxis = list(range = c(-1.5, 1.5), fixedrange = TRUE, title = "LRR"),
-        shapes = list(
-          list(
-            type = "rect",
-            xref = "x", x0 = cnv$start, x1 = cnv$end,
-            yref = "y", y0 = -1.5, y1 = 1.5,
-            fillcolor = "rgba(255, 0, 0, 0.15)",
-            line = list(width = 0)
-          )
-        )
+        shapes = lrr_outlines
       )
 
     # BAF plot
@@ -396,15 +408,7 @@ server <- function(input, output, session) {
       layout(
         xaxis = list(range = c(window_start, window_end), autorange = FALSE),
         yaxis = list(range = c(0, 1), fixedrange = TRUE, title = "BAF"),
-        shapes = list(
-          list(
-            type = "rect",
-            xref = "x", x0 = cnv$start, x1 = cnv$end,
-            yref = "y", y0 = 0, y1 = 1,
-            fillcolor = "rgba(0, 0, 255, 0.15)",
-            line = list(width = 0)
-          )
-        )
+        shapes = baf_outlines
       )
 
     fig <- subplot(p2, p1, nrows = 2, shareX = TRUE, titleY = TRUE) %>%
