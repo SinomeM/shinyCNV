@@ -387,11 +387,11 @@ server <- function(input, output, session) {
       type = "scatter", mode = "markers",
       name = "LRR",
       marker = list(color = "red", opacity = 0.8),
-      text = ~paste("Position:", start, "<br>LRR:", get(lrr_col)),
       hoverinfo = "text"
     ) %>%
       layout(
-        xaxis = list(range = c(window_start, window_end), autorange = FALSE),
+        xaxis = list(range = c(window_start, window_end),
+                     autorange = FALSE, title = "Position (Mbp)"),
         yaxis = list(range = c(-1.5, 1.5), fixedrange = TRUE, title = "LRR"),
         shapes = lrr_outlines
       )
@@ -402,7 +402,6 @@ server <- function(input, output, session) {
       type = "scatter", mode = "markers",
       name = "BAF",
       marker = list(color = "blue", opacity = 0.8),
-      text = ~paste("Position:", start, "<br>BAF:", BAF),
       hoverinfo = "text"
     ) %>%
       layout(
