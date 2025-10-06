@@ -316,46 +316,6 @@ server <- function(input, output, session) {
   }
 
   # 7. CNV plot
-  output$cnv_plot <- renderPlot({
-    # Get current CNV
-    cnv <- r_state$filtered_cnvs[r_state$current_idx]
-    if (is.null(cnv) || nrow(cnv) == 0) {
-      plot.new()
-      title("No CNV selected")
-      return()
-    }
-
-    # Get sample tabix file path
-    tabix_path <- samples[sample_ID == cnv$sample_ID, file_path_tabix]
-    chr <- cnv$chr
-
-    # Load SNPs for the sample and chromosome
-    snp_dt <- load_sample_snps(tabix_path, chr)
-
-    snps_chr <- snps[Chr == chr, ]
-
-    # Filter snp_dt based on input$snp_filtering
-    if (!is.null(input$snp_filtering) & input$snp_filtering == "yes") {
-      snp_dt <- snp_dt[start %in% unique(snps_chr[, unique(Position)]), ]
-    }
-
-    if (snp_dt[,.N] == 0) {
-      plot.new()
-      title("No SNP data available for this sample and chromosome")
-      return()
-    }
-    else {
-      # Placeholder plot for LRR and BAF (REMEBER TO MOVE TO LRR_ADJ IF PRESENT)
-      par(mfrow = c(2, 1))
-      plot(snp_dt$start, snp_dt$LRR, pch = 20, col = "blue",
-           main = "LRR values", xlab = "Position", ylab = "LRR")
-      abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
-      plot(snp_dt$start, snp_dt$BAF, pch = 20, col = "green",
-           main = "BAF values", xlab = "Position", ylab = "BAF")
-      abline(v = c(cnv$start, cnv$end), lty = 2, col = "red")
-    }
-  })
-
   # plotly version
   output$cnv_plotly <- renderPlotly({
     cnv <- r_state$filtered_cnvs[r_state$current_idx]
@@ -377,6 +337,14 @@ server <- function(input, output, session) {
     # Empty plot if no snps are left
     if (nrow(snp_dt) == 0) return(plotly_empty())
 
+    # Clamp LRR values into [-1.5, 1.5]
+    if ("LRR" %in% names(snp_dt)) {
+      snp_dt[, LRR := pmax(pmin(LRR, 1.5), -1.5)]
+    }
+    if ("LRR_adj" %in% names(snp_dt)) {
+      snp_dt[, LRR_adj := pmax(pmin(LRR_adj, 1.5), -1.5)]
+    }
+
     # Use LRR_adj if present, else LRR
     lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
 
@@ -387,7 +355,10 @@ server <- function(input, output, session) {
         marker = list(color = "blue"),
         text = ~paste("Position:", start, "<br>LRR:", get(lrr_col)),
         hoverinfo = "text"
-      )
+      ) %>%
+        layout(
+          yaxis = list(range = c(-1.5, 1.5), fixedrange = TRUE, title = "LRR")
+        )
 
       # BAF plot
       p2 <- plot_ly(
@@ -396,7 +367,10 @@ server <- function(input, output, session) {
         marker = list(color = "green"),
         text = ~paste("Position:", start, "<br>BAF:", BAF),
         hoverinfo = "text"
-      )
+      ) %>%
+        layout(
+          yaxis = list(range = c(0, 1), fixedrange = TRUE, title = "BAF")
+        )
 
       subplot(p1, p2, nrows = 2, shareX = TRUE, titleY = TRUE)
 
