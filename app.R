@@ -117,18 +117,21 @@ ui <- fluidPage(
         selectInput('vo_filter', 'Filter CNV previous VI',
                     c('all', 'new', 'true', 'false', 'unkown', 'error'), 'all'),
         selectInput('gt_filter', 'Filter CNV GT', c('both', 'dels', 'dups'), 'both'),
-        textInput("min_len_filter", "Minimum CNV length", '50000'),
-        textInput("max_len_filter", "Maximum CNV length", '10000000'),
+        textInput("min_len_filter", "Minimum CNV length (bp)", '50000'),
+        textInput("max_len_filter", "Maximum CNV length (bp)", '10000000'),
         textInput("min_snp_filter", "Minimum number of SNPs", '0'),
         actionButton('run_filtering', 'Run Filtering', class = 'btn-primary')
       ),
       # Fixed locus
       fluidRow(
         h4('Select fixed locus'),
+        textInput('locus_name', 'Locus Name', ''),
         textInput('locus_chr', 'Locus Chromosome', ''),
-        textInput('locus_start', 'Locus Start Position', ''),
-        textInput('locus_end', 'Locus End Position', ''),
-        textInput('min_overlap', 'Minimum overlap with locus (bp)', '0')
+        textInput('locus_start', 'Locus Start Position (bp)', ''),
+        textInput('locus_end', 'Locus End Position (bp)', ''),
+        textInput('min_overlap', 'Minimum overlap with locus (proportion)', '0'),
+        actionButton('run_fixed_locus', 'Check selected locus',
+                     class = 'btn-primary')
       )
     ),
     # CNV table at the top of the main page
@@ -162,7 +165,6 @@ ui <- fluidPage(
 
 # Missing features:
 #  - ability to update CNV coordinates (start/end) and save changes
-#  - fixed locus implementation
 
 server <- function(input, output, session) {
   # 1. Initialize reactive values
@@ -176,29 +178,31 @@ server <- function(input, output, session) {
   observeEvent(input$run_filtering, {
     filtered <- r_state$cnvs
 
-    # Convert inputs to numeric and check if they are valid
-    min_len <- as.numeric(input$min_len_filter)
-    max_len <- as.numeric(input$max_len_filter)
-    min_snp <- as.numeric(input$min_snp_filter)
+    # Convert inputs to integer and check if they are valid
+    min_len <- as.integer(input$min_len_filter)
+    max_len <- as.integer(input$max_len_filter)
+    min_snp <- as.integer(input$min_snp_filter)
 
     # Apply filters based on input values
-    if (!is.null(input$min_len_filter)) {
+    if (!is.na(input$min_len_filter)) {
       filtered <- filtered[length >= min_len]
     }
-    if (!is.null(input$max_len_filter)) {
+    if (!is.na(input$max_len_filter)) {
       filtered <- filtered[length <= max_len]
     }
-    if (!is.null(input$min_snp_filter)) {
+    if (!is.na(input$min_snp_filter)) {
       filtered <- filtered[numsnp >= min_snp]
     }
-    if (!is.null(input$gt_filter)) {
+    if (!is.null(input$gt_filter) && input$gt_filter != 'both' &&
+        !is.na(input$gt_filter)) {
       if (input$gt_filter == 'dels') {
         filtered <- filtered[GT == 1, ]
       } else if (input$gt_filter == 'dups') {
         filtered <- filtered[GT == 2, ]
       }
     }
-    if (!is.null(input$vo_filter)) {
+    if (!is.null(input$vo_filter) && input$vo_filter != 'all' &&
+        !is.na(input$vo_filter)) {
       if (input$vo_filter == 'new') {
         filtered <- filtered[vo == -9, ]
       } else if (input$vo_filter == 'true') {
@@ -316,8 +320,8 @@ server <- function(input, output, session) {
     if (ncol(snp_dt) >= 6) {
       setnames(snp_dt, c("chr", "start", "end", "LRR", "BAF", "LRR_adj"))
       snp_dt[, ':=' (chr = as.character(chr),
-                     start = as.numeric(start),
-                     end = as.numeric(end),
+                     start = as.integer(start),
+                     end =   as.integer(end),
                      LRR = as.numeric(LRR),
                      BAF = as.numeric(BAF),
                      LRR_adj = as.numeric(LRR_adj))]
@@ -325,8 +329,8 @@ server <- function(input, output, session) {
     if (ncol(snp_dt) == 5) {
       setnames(snp_dt, c("chr", "start", "end", "LRR", "BAF"))
       snp_dt[, ':=' (chr = as.character(chr),
-                     start = as.numeric(start),
-                     end = as.numeric(end),
+                     start = as.integer(start),
+                     end =   as.integer(end),
                      LRR = as.numeric(LRR),
                      BAF = as.numeric(BAF))]
     }
@@ -379,7 +383,7 @@ server <- function(input, output, session) {
     window_end <- cnv$end + flank
 
     # Identify other CNVs on the same chromosome for this sample
-    all_cnvs <- r_state$cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
+    all_cnvs <- r_state$filtered_cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
 
     # create the CNVs outlines. Note that the current CNV has a thin border
     # while the other CNVs have no border (width=0)
@@ -451,6 +455,72 @@ server <- function(input, output, session) {
     out_path <- file.path(wkdir, paste0(pname, ".tsv"))
     fwrite(r_state$filtered_cnvs, out_path, sep = "\t")
   }, ignoreNULL = TRUE)
+
+  # 9. Fixed locus
+  observeEvent(input$run_fixed_locus, {
+    loc_name <- as.character(input$locus_name)
+    loc_chr <- as.integer(input$locus_chr)
+    loc_start <- as.integer(input$locus_start)
+    loc_end <- as.integer(input$locus_end)
+    min_overlap <- as.numeric(input$min_overlap)
+
+    min_len <- as.integer(input$min_len_filter)
+    max_len <- as.integer(input$max_len_filter)
+    min_snp <- as.integer(input$min_snp_filter)
+
+    # if something is not provided, raise a warning
+    if (is.null(loc_name) || loc_name == '' ||
+        is.null(loc_chr) || is.na(loc_chr) ||
+        is.null(loc_start) || is.na(loc_start) ||
+        is.null(loc_end) || is.na(loc_end) ||
+        is.null(min_overlap) || is.na(min_overlap) ||
+        min_overlap < 0 || min_overlap > 1) {
+      showNotification("Locus info missing or wrong format.",
+                       type = "warning")
+      return()
+    }
+
+    # If all inputs are valid, select the putative carriers from the CNV table
+    cnvs <- r_state$cnvs
+
+    # first apply filters if provided
+    if (!is.na(min_len)) {
+      cnvs <- cnvs[length >= min_len]
+    }
+    if (!is.na(max_len)) {
+      cnvs <- cnvs[length <= max_len]
+    }
+    if (!is.na(min_snp)) {
+      cnvs <- cnvs[numsnp >= min_snp]
+    }
+    if (!is.null(input$gt_filter) && input$gt_filter != 'both' &&
+        !is.na(input$gt_filter)) {
+      if (input$gt_filter == 'dels') {
+        cnvs <- cnvs[GT == 1, ]
+      } else if (input$gt_filter == 'dups') {
+        cnvs <- cnvs[GT == 2, ]
+      }
+    }
+
+    # then select the CNVs overlapping the locus and compute the overlap
+    cnvs <- cnvs[chr == loc_chr & 
+                 start <= loc_end & 
+                 end >= loc_start, ]
+    cnvs[, overlap := pmin(end, loc_end) - pmax(start, loc_start) + 1]
+    cnvs <- cnvs[overlap >= min_overlap, ]
+
+    # assign the locus boundaries to the CNVs
+    cnvs[, ':=' (locus_name = loc_name,
+                 chr = loc_chr,
+                 start = loc_start,
+                 end = loc_end)]
+
+    # Update filtered table and reset index
+    cnvs <- unique(cnvs[, .(sample_ID, chr, start, end, locus_name, GT)])
+    cnvs[, ':=' (numsnp = NA, CN = NA, length = NA, vo = -9)]
+    r_state$filtered_cnvs <- cnvs
+    r_state$current_idx <- 1
+  })
 
 }
 
