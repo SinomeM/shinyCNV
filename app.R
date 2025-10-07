@@ -85,7 +85,22 @@ if (!dir.exists(wkdir)) dir.create(wkdir, recursive = F)
 # In the sidebar, there are options to filter CNVs, change plot height etc
 
 ui <- fluidPage(
-  # Sidebar layout, contains filtering and settings
+  tags$head(
+    tags$style(HTML("
+      .shiny-notification {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+      }
+      .shiny-notification-warning {
+        background-color: #c62828;
+        color: #ffffff;
+        font-size: 1.1rem;
+        font-weight: 600;
+        box-shadow: 0 0 20px rgba(198, 40, 40, 0.7);
+      }
+    "))
+  ),
   layout_sidebar(
     sidebar = sidebar(
       position = 'left',
@@ -147,7 +162,6 @@ ui <- fluidPage(
 
 # Missing features:
 #  - ability to update CNV coordinates (start/end) and save changes
-#  - ability to save the CNV table to a file
 #  - fixed locus implementation
 
 server <- function(input, output, session) {
@@ -417,6 +431,20 @@ server <- function(input, output, session) {
 
     fig
   })
+
+  # 8. Save table
+  observeEvent(r_state$current_idx, {
+    req(nrow(r_state$filtered_cnvs) > 0)
+
+    pname <- trimws(input$project_name %||% "")
+    if (!nzchar(pname)) {
+      showNotification("Please provide a project name before continuing.", type = "warning")
+      return()
+    }
+
+    out_path <- file.path(wkdir, paste0(pname, ".tsv"))
+    fwrite(r_state$filtered_cnvs, out_path, sep = "\t")
+  }, ignoreNULL = TRUE)
 
 }
 
