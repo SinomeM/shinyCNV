@@ -67,6 +67,8 @@ if (!'length' %in% colnames(cnvs)) cnvs[, length := end-start+1]
 if (!'numsnp' %in% colnames(cnvs)) cnvs[, numsnp := NA]
 cnvs <- cnvs[, .(sample_ID, chr, start, end, numsnp, length, GT, CN, vo)]
 setorder(cnvs, chr, start)
+cnvs[, ':=' (original_start = start,
+             original_end = end)]
 
 # Check if the provided wkdir exists, if not create it (recursive set to
 # false, if it's needed it's likely the user made a mistake)
@@ -92,17 +94,15 @@ ui <- fluidPage(
         h4('Settings'),
         textInput('project_name', 'Project Name', ''),
         selectInput('snp_filtering', 'Filter SNPs based on input SNP table?',
-                    c('yes', 'no'), 'yes'),
-        sliderInput('plot_height', 'Change plot height',
-                    min = 400, max = 1000, value = 750, step = 50)
+                    c('yes', 'no'), 'yes')
       ),
       # CNVs filtering
       fluidRow(
         h4('Filter the CNV table'),
         selectInput('vo_filter', 'Filter CNV previous VI',
-                    c('new', 'true', 'false', 'unkown', 'all'), 'all'),
+                    c('all', 'new', 'true', 'false', 'unkown'), 'all'),
         selectInput('gt_filter', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
-        textInput("min_len_filter", "Minimum CNV length", '0'),
+        textInput("min_len_filter", "Minimum CNV length", '50000'),
         textInput("max_len_filter", "Maximum CNV length", '10000000'),
         textInput("min_snp_filter", "Minimum number of SNPs", '0'),
         actionButton('run_filtering', 'Run Filtering', class = 'btn-primary')
@@ -267,7 +267,9 @@ server <- function(input, output, session) {
   output$cnv_table <- renderDT({
     current_row <- r_state$filtered_cnvs[r_state$current_idx]
     datatable(
-      current_row,
+      current_row[, .(sample_ID, chr, "start (Mbp)" = round(start/1e6, 2),
+                      "end (Mbp)" = round(end/1e6, 2), numsnp,
+                      "length (Mbp)" = round(length/1e6, 2), GT, CN, vo)],
       options = list(dom = 't', 
                     paging = FALSE,
                     searching = FALSE,
