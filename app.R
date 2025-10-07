@@ -149,8 +149,9 @@ ui <- fluidPage(
 # Server function ----
 
 # Missing features:
-#  - ability to update CNV coordinates (start/end) and save changes
-#  - raise an error if the output file already exists or cannot be written
+#  - Ability to update CNV coordinates (start/end) and save changes
+#  - Raise an error if the output file already exists or cannot be written
+#  - Update launch instructions and possibly the app startup itself
 
 # To be decided:
 #  - How to handle the individual calls in fixed locus mode
