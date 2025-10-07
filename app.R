@@ -381,9 +381,8 @@ server <- function(input, output, session) {
     # Identify other CNVs on the same chromosome for this sample
     all_cnvs <- r_state$cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
 
-    print(all_cnvs)
-
-    # create the CNVs outlines
+    # create the CNVs outlines. Note that the current CNV has a thin border
+    # while the other CNVs have no border (width=0)
     lrr_outlines <- list()
     baf_outlines <- list()
     for (i in 1:all_cnvs[, .N]) {
@@ -393,14 +392,14 @@ server <- function(input, output, session) {
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = -1.5, y1 = 1.5,
         fillcolor = "rgba(255, 0, 0, 0.05)",
-        line = list(width = 0.2)
+        line = list(width = ifelse(i==1, 0.2, 0))
       )
       baf_outlines[[i]] <- list(
         type = "rect",
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = 0, y1 = 1,
         fillcolor = "rgba(0, 0, 255, 0.05)",
-        line = list(width = 0.2)
+        line = list(width = ifelse(i==1, 0.2, 0))
       )
     }
 
