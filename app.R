@@ -115,8 +115,8 @@ ui <- fluidPage(
       fluidRow(
         h4('Filter the CNV table'),
         selectInput('vo_filter', 'Filter CNV previous VI',
-                    c('all', 'new', 'true', 'false', 'unkown'), 'all'),
-        selectInput('gt_filter', 'Filter CNV GT', c('dels', 'dups', 'both'), 'both'),
+                    c('all', 'new', 'true', 'false', 'unkown', 'error'), 'all'),
+        selectInput('gt_filter', 'Filter CNV GT', c('both', 'dels', 'dups'), 'both'),
         textInput("min_len_filter", "Minimum CNV length", '50000'),
         textInput("max_len_filter", "Maximum CNV length", '10000000'),
         textInput("min_snp_filter", "Minimum number of SNPs", '0'),
@@ -207,6 +207,8 @@ server <- function(input, output, session) {
         filtered <- filtered[vo == 2, ]
       } else if (input$vo_filter == 'unkown') {
         filtered <- filtered[vo == 3, ]
+      } else if (input$vo_filter == 'error') {
+        filtered <- filtered[vo == -7, ]
       }
     }
 
@@ -335,6 +337,11 @@ server <- function(input, output, session) {
   # 7. CNV plot
   # plotly version
   output$cnv_plotly <- renderPlotly({
+    if (nrow(r_state$filtered_cnvs) == 0 ||
+        r_state$current_idx > nrow(r_state$filtered_cnvs)) {
+      return(plotly_empty())
+    }
+
     cnv <- r_state$filtered_cnvs[r_state$current_idx]
     if (is.null(cnv) || nrow(cnv) == 0) {
       return(plotly_empty())
