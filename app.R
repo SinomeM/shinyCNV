@@ -18,20 +18,12 @@
 # Also the app can focus on a specific locus ad show all CNVs in the region with
 # minimum overlap with the fixed locus.
 
-# This version is a major update of the previous app_old.R, with added features:
-#  - new UI layout based on bslib (possibly built around page_sidebar())
-#  - Interactive plots instead of static (can be zoomed in/out)
-#  - Ability to update CNV coordinates (start/end)
-#  - Ability to toggle the SNPs filtering on and off
-#  - Other minor improvements
-
 library(DT)
 library(bslib)
 library(shiny)
 library(ggplot2)
 library(data.table)
 library(plotly)
-
 
 # Set this to true when running from command line
 if (F) {
@@ -76,13 +68,6 @@ if (!dir.exists(wkdir)) dir.create(wkdir, recursive = F)
 
 
 # UI function ----
-
-# Define the app main page using bslib::page_sidebar()
-
-# The layout is a central page with CNV table one the top, CNV plot in the middle
-# and the buttons to validate CNVs and move around at the bottom
-
-# In the sidebar, there are options to filter CNVs, change plot height etc
 
 ui <- fluidPage(
   tags$head(
@@ -165,6 +150,11 @@ ui <- fluidPage(
 
 # Missing features:
 #  - ability to update CNV coordinates (start/end) and save changes
+#  - raise an error if the output file already exists or cannot be written
+
+# To be decided:
+#  - How to handle the individual calls in fixed locus mode
+#  - How to deal with boundaries refinenment in fixed locus mode
 
 server <- function(input, output, session) {
   # 1. Initialize reactive values
