@@ -18,6 +18,7 @@ if (testing == FALSE) {
   if (!file.exists(cargs[3])) stop('Samples table not found!')
   if (!file.exists(cargs[4])) stop('SNPs table not found!')
   # Load data (CNVs, samples and SNPs)
+  wkdir <- cargs[1]
   cnvs <- fread(cargs[2])
   samples <- fread(cargs[3])[, .(sample_ID, file_path_tabix)]
   snps <- fread(cargs[4])
