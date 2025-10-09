@@ -155,6 +155,7 @@ server <- function(input, output, session) {
 
   # 2. Filtering logic
   observeEvent(input$run_filtering, {
+    # always start from the original CNV table
     filtered <- r_state$cnvs
 
     # Convert inputs to integer and check if they are valid
@@ -320,27 +321,29 @@ server <- function(input, output, session) {
   # 7. CNV plot
   # plotly version
   output$cnv_plotly <- renderPlotly({
+    # if no CNVs or index out of bounds, return empty plot
     if (nrow(r_state$filtered_cnvs) == 0 ||
         r_state$current_idx > nrow(r_state$filtered_cnvs)) {
       return(plotly_empty())
     }
 
+    # Get current CNV, if null or empty return empty plot
     cnv <- r_state$filtered_cnvs[r_state$current_idx]
     if (is.null(cnv) || nrow(cnv) == 0) {
       return(plotly_empty())
     }
 
+    # Load data for the sample in the entire chromosome
     tabix_path <- samples[sample_ID == cnv$sample_ID, file_path_tabix]
     chr <- cnv$chr
-
-    # Load SNPs for the sample and chromosome
     snp_dt <- load_sample_snps(tabix_path, chr)
+    # Clean/filtered SNPs in the chromosome
     snps_chr <- snps[Chr == chr, ]
 
+    # Select filtered SNPs if requested
     if (!is.null(input$snp_filtering) && input$snp_filtering == "yes") {
       snp_dt <- snp_dt[start %in% unique(snps_chr[, unique(Position)]), ]
     }
-
     # Empty plot if no snps are left
     if (nrow(snp_dt) == 0) return(plotly_empty())
 
@@ -361,11 +364,11 @@ server <- function(input, output, session) {
     window_start <- max(cnv$start - flank, 0)
     window_end <- cnv$end + flank
 
-    # Identify other CNVs on the same chromosome for this sample
+    # Get all CNVs on the  chromosome for this sample (before filtering)
     all_cnvs <- r_state$cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
 
-    # create the CNVs outlines. Note that the current CNV has a thin border
-    # while the other CNVs have no border (width=0)
+    # Create the CNVs outlines. Note that the current CNV has a thin border
+    # while the other CNVs have no border
     lrr_outlines <- list()
     baf_outlines <- list()
     for (i in 1:all_cnvs[, .N]) {
@@ -386,7 +389,7 @@ server <- function(input, output, session) {
       )
     }
 
-    # Add an additional outline (in light gray) for the locus in fixed locus mode
+    # Add an additional outline (in light gray) for the locus/region if relevant
     if (r_state$fixed_locus) {
       ix <- length(lrr_outlines) + 1
       lrr_outlines[[ix]] <- list(
@@ -406,7 +409,6 @@ server <- function(input, output, session) {
         line = list(width = 0.4)
       )
     }
-
     if (r_state$select_region) {
       ix <- length(lrr_outlines) + 1
       lrr_outlines[[ix]] <- list(
@@ -456,9 +458,9 @@ server <- function(input, output, session) {
         shapes = baf_outlines
       )
 
+    # Combine LRR and BAF plots into a single figure with shared x-axis
     fig <- subplot(p2, p1, nrows = 2, shareX = TRUE, titleY = TRUE) %>%
       layout(dragmode = "pan")
-
     fig
   })
 
@@ -467,6 +469,8 @@ server <- function(input, output, session) {
     req(nrow(r_state$filtered_cnvs) > 0)
 
     pname <- trimws(input$project_name %||% "")
+
+    # Throw a warning if project name is not provided
     if (!nzchar(pname)) {
       showNotification("Please provide a project name before continuing.", type = "warning")
       return()
@@ -500,7 +504,7 @@ server <- function(input, output, session) {
       return()
     }
 
-    # If all inputs are valid, select the putative carriers from the CNV table
+    # If all inputs are valid, select the putative carriers from the original CNV table
     cnvs <- r_state$cnvs
 
     # first apply filters if provided
@@ -565,7 +569,7 @@ server <- function(input, output, session) {
       return()
     }
 
-    # If all inputs are valid, select the putative carriers from the CNV table
+    # If all inputs are valid, select the putative carriers from the original CNV table
     cnvs <- r_state$cnvs
 
     # first apply filters if provided
