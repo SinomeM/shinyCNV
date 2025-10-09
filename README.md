@@ -58,6 +58,27 @@ The app interface is divided in two main parts:
   highlighted with a gray box and thicker border. The plot can be zoomed in and out
   using the scroll wheel or the `+`/`-` buttons on the top right of the plot.
 
+Below the plot there are buttons to navigate through CNVs, store the visual
+validation for the CNV and to refine boundaries. The buttons are:
+
+- `True`: confirm the current CNV call
+- `False`: reject the current CNV call
+- `Unknown`: mark the current CNV call as unclear
+- `Error`: mark the current CNV call as erroneous
+- `Previous`: go to the previous CNV
+- `Next`: go to the next CNV
+- `Refine CNV coordinates`: open a modal to refine the boundaries of the current CNV
+
+The buttons can also be activated using the keyboard:
+
+- `T`: True
+- `F`: False
+- `U`: Unknown
+- `E`: Error
+- `P`: Previous
+- `N`: Next
+- `R`: Refine CNV coordinates
+
 
 # Update Boundaries
 

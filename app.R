@@ -91,6 +91,14 @@ ui <- fluidPage(
           case 'P':
             $('#btn_prv').click();
             break;
+          case 'e':
+          case 'E':
+            $('#btn_err').click();
+            break;
+          case 'r':
+          case 'R':
+            $('#btn_ref').click();
+            break;
         }
       });
     "))
