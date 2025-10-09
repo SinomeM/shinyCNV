@@ -10,13 +10,22 @@
 # with the following columns (no header): chr, position, position, LRR, BAF, LRR_adj
 # (if LRR_adj is not present, the app will use LRR instead).
 
-# The purpose of the app is to visualize each CNV in a plot with LRR/BAF values
-# in order to visually validate the call. Each CNV can be marked as either true
-# false or unknown.
-# The input CNV table can also be filtered based on different metrics (GT, minimum
-# length or number of SNPs, previous visual inspection outcome).
-# Also the app can focus on a specific locus ad show all CNVs in the region with
-# minimum overlap with the fixed locus.
+
+# App modes:
+#  1. Normal: the app will go through all CNVs in the provided table
+#  2. Simple Filtering: the CNVs table will be filtered based on the provided
+#     criteria (vo, GT, length, numsnp).
+#  3. Fixed locus: the app will select putative carriers in the provided
+#     locus. If any filter is provided, it will also be applied (before selecting).
+#    NB: in this mode the locus is the units of analysis, not the CNVs.
+#  4. Select CNVs in region: the app will allow the user to specify a genomic region
+#     and will only show CNVs that overlap with this region (above a certain IOU
+#     threshold). Also in this mode any provided filter will be applied first.
+
+# In all modes the app will plot all CNVs for the sample (before any filtering)
+# on the same chromosome as the current CNV. The CNV of interest is highlighted with
+# a thin border. In fixed locus and select region modes, the locus/region is also
+# highlighted with a gray box and thicker border.
 
 library(DT)
 library(bslib)
@@ -164,16 +173,6 @@ ui <- fluidPage(
 #  - Update launch instructions and possibly the app startup itself
 #  - Update README once the app is stable, keep the old version for reference
 
-# To be decided:
-#  - How to handle the individual calls in fixed locus mode
-#  - How to deal with boundaries refinement in fixed locus mode
-
-# One possibility for the fixed locus is to have two different modes:
-#  1. Normal: the locus become the new CNV coordinates, no matter the original CNVs
-#  2. Simple select: it only selects the CNVs overlapping the locus, then behaves
-#     like the normal mode, but the CNV coordinates remain unchanged
-# In modes 1 the refine button should be hidden/disactivated, while in mode 2 it
-# should be available.
 
 server <- function(input, output, session) {
   # 1. Initialize reactive values
