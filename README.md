@@ -92,14 +92,17 @@ The `vo` column is coded as follows:
 
 ## Install
 
-Just clone the repo, `app.R` is all is needed to run the program.
+Just clone the repo, `app.R` is all is needed to run the program (assuming the
+dependencies are met). 
 
 R dependencies:
 
 - shiny
 - data.table
-- ggplot
-- CNValidatron
+- ggplot2
+- bslib
+- DT
+- plotly
 
 Linux dependencies:
 
