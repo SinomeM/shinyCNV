@@ -105,7 +105,7 @@ ui <- fluidPage(
         textInput("min_len_filter", "Minimum CNV length (bp)", '50000'),
         textInput("max_len_filter", "Maximum CNV length (bp)", '10000000'),
         textInput("min_snp_filter", "Minimum number of SNPs", '0'),
-        actionButton('run_filtering', 'Run Filtering', class = 'btn-primary')
+        actionButton('run_filtering', 'Simple Filtering', class = 'btn-primary')
       ),
       # Fixed locus
       fluidRow(
@@ -115,7 +115,17 @@ ui <- fluidPage(
         textInput('locus_start', 'Locus Start Position (bp)', ''),
         textInput('locus_end', 'Locus End Position (bp)', ''),
         textInput('min_overlap', 'Minimum overlap with locus (proportion)', '0'),
-        actionButton('run_fixed_locus', 'Check selected locus',
+        actionButton('run_fixed_locus', 'Fixed Locus Mode',
+                     class = 'btn-primary')
+      ),
+      # Select CNVs overlapping region
+      fluidRow(
+        h4('Select CNVs overlapping a region'),
+        textInput('region_chr', 'Region Chromosome', ''),
+        textInput('region_start', 'Region Start Position (bp)', ''),
+        textInput('region_end', 'Region End Position (bp)', ''),
+        textInput('min_iou', 'Minimum IOU with region', '0'),
+        actionButton('run_select_region', 'Select CNVs in Region',
                      class = 'btn-primary')
       )
     ),
@@ -152,17 +162,27 @@ ui <- fluidPage(
 #  - Ability to update CNV coordinates (start/end) and save changes
 #  - Raise an error if the output file already exists or cannot be written
 #  - Update launch instructions and possibly the app startup itself
+#  - Update README once the app is stable, keep the old version for reference
 
 # To be decided:
 #  - How to handle the individual calls in fixed locus mode
-#  - How to deal with boundaries refinenment in fixed locus mode
+#  - How to deal with boundaries refinement in fixed locus mode
+
+# One possibility for the fixed locus is to have two different modes:
+#  1. Normal: the locus become the new CNV coordinates, no matter the original CNVs
+#  2. Simple select: it only selects the CNVs overlapping the locus, then behaves
+#     like the normal mode, but the CNV coordinates remain unchanged
+# In modes 1 the refine button should be hidden/disactivated, while in mode 2 it
+# should be available.
 
 server <- function(input, output, session) {
   # 1. Initialize reactive values
   r_state <- reactiveValues(
     cnvs = cnvs,                    # original CNV table
     filtered_cnvs = cnvs,           # filtered version
-    current_idx = 1                 # current CNV index
+    current_idx = 1,                # current CNV index
+    fixed_locus = FALSE,            # whether in fixed locus mode
+    select_region = FALSE           # whether in select region mode
   )
 
   # 2. Filtering logic
@@ -367,14 +387,14 @@ server <- function(input, output, session) {
     # Use LRR_adj if present, else LRR
     lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
 
-    # Default zoom window: CNV ± 8 lengths (no SNPs discarded)
+    # Default zoom window: CNV ± 8 lengths
     cnv_len <- if (!is.na(cnv$length)) cnv$length else (cnv$end - cnv$start + 1)
     flank <- 8 * cnv_len
     window_start <- max(cnv$start - flank, 0)
     window_end <- cnv$end + flank
 
     # Identify other CNVs on the same chromosome for this sample
-    all_cnvs <- r_state$filtered_cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
+    all_cnvs <- r_state$cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
 
     # create the CNVs outlines. Note that the current CNV has a thin border
     # while the other CNVs have no border (width=0)
@@ -387,14 +407,55 @@ server <- function(input, output, session) {
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = -1.5, y1 = 1.5,
         fillcolor = "rgba(255, 0, 0, 0.05)",
-        line = list(width = ifelse(i==1, 0.2, 0))
+        line = list(width = ifelse(i == 1, 0.1, 0))
       )
       baf_outlines[[i]] <- list(
         type = "rect",
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = 0, y1 = 1,
         fillcolor = "rgba(0, 0, 255, 0.05)",
-        line = list(width = ifelse(i==1, 0.2, 0))
+        line = list(width = ifelse(i == 1, 0.1, 0))
+      )
+    }
+
+    # Add an additional outline (in light gray) for the locus in fixed locus mode
+    if (r_state$fixed_locus) {
+      ix <- length(lrr_outlines) + 1
+      lrr_outlines[[ix]] <- list(
+        type = "rect",
+        xref = "x", x0 = as.integer(input$locus_start),
+        x1 = as.integer(input$locus_end),
+        yref = "y", y0 = -1.5, y1 = 1.5,
+        fillcolor = "rgba(200, 200, 200, 0.3)",
+        line = list(width = 0.5)
+      )
+      baf_outlines[[ix]] <- list(
+        type = "rect",
+        xref = "x", x0 = as.integer(input$locus_start),
+        x1 = as.integer(input$locus_end),
+        yref = "y", y0 = 0, y1 = 1,
+        fillcolor = "rgba(200, 200, 200, 0.3)",
+        line = list(width = 0.4)
+      )
+    }
+
+    if (r_state$select_region) {
+      ix <- length(lrr_outlines) + 1
+      lrr_outlines[[ix]] <- list(
+        type = "rect",
+        xref = "x", x0 = as.integer(input$region_start),
+        x1 = as.integer(input$region_end),
+        yref = "y", y0 = -1.5, y1 = 1.5,
+        fillcolor = "rgba(200, 200, 200, 0.3)",
+        line = list(width = 0.3)
+      )
+      baf_outlines[[ix]] <- list(
+        type = "rect",
+        xref = "x", x0 = as.integer(input$region_start),
+        x1 = as.integer(input$region_end),
+        yref = "y", y0 = 0, y1 = 1,
+        fillcolor = "rgba(200, 200, 200, 0.3)",
+        line = list(width = 0.3)
       )
     }
 
@@ -511,6 +572,65 @@ server <- function(input, output, session) {
     cnvs[, ':=' (numsnp = NA, CN = NA, length = NA, vo = -9)]
     r_state$filtered_cnvs <- cnvs
     r_state$current_idx <- 1
+    r_state$fixed_locus <- TRUE
+  })
+
+  # 10. Select region
+  observeEvent(input$run_select_region, {
+    reg_chr <- as.integer(input$region_chr)
+    reg_start <- as.integer(input$region_start)
+    reg_end <- as.integer(input$region_end)
+    min_iou <- as.numeric(input$min_iou)
+
+    min_len <- as.integer(input$min_len_filter)
+    max_len <- as.integer(input$max_len_filter)
+    min_snp <- as.integer(input$min_snp_filter)
+
+    # if something is not provided, raise a warning
+    if (is.null(reg_chr) || is.na(reg_chr) ||
+        is.null(reg_start) || is.na(reg_start) ||
+        is.null(reg_end) || is.na(reg_end) ||
+        is.null(min_iou) || is.na(min_iou) ||
+        min_iou < 0 || min_iou > 1) {
+      showNotification("Region info missing or wrong format.",
+                       type = "warning")
+      return()
+    }
+
+    # If all inputs are valid, select the putative carriers from the CNV table
+    cnvs <- r_state$cnvs
+
+    # first apply filters if provided
+    if (!is.na(min_len)) {
+      cnvs <- cnvs[length >= min_len]
+    }
+    if (!is.na(max_len)) {
+      cnvs <- cnvs[length <= max_len]
+    }
+    if (!is.na(min_snp)) {
+      cnvs <- cnvs[numsnp >= min_snp]
+    }
+    if (!is.null(input$gt_filter) && input$gt_filter != 'both' &&
+        !is.na(input$gt_filter)) {
+      if (input$gt_filter == 'dels') {
+        cnvs <- cnvs[GT == 1, ]
+      } else if (input$gt_filter == 'dups') {
+        cnvs <- cnvs[GT == 2, ]
+      }
+    }
+
+    # then select the CNVs overlapping the locus and compute the overlap
+    cnvs <- cnvs[chr == reg_chr & 
+                 start <= reg_end & 
+                 end >= reg_start, ]
+    cnvs[, iou := (pmin(end, reg_end) - pmax(start, reg_start) + 1) /
+                    (pmax(end, reg_end) - pmin(start, reg_start) + 1)]
+    cnvs <- cnvs[iou >= min_iou, ]
+
+    # Update filtered table and reset index
+    r_state$filtered_cnvs <- cnvs
+    r_state$current_idx <- 1
+    r_state$fixed_locus <- TRUE
   })
 
 }
