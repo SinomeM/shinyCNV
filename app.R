@@ -66,6 +66,33 @@ ui <- fluidPage(
         font-weight: 600;
         box-shadow: 0 0 20px rgba(198, 40, 40, 0.7);
       }
+    ")),
+    tags$script(HTML("
+      $(document).on('keydown', function(e) {
+        if ($(e.target).is('input, textarea, select, button')) return;
+        switch (e.key) {
+          case 't':
+          case 'T':
+            $('#btn_true').click();
+            break;
+          case 'f':
+          case 'F':
+            $('#btn_false').click();
+            break;
+          case 'u':
+          case 'U':
+            $('#btn_unk').click();
+            break;
+          case 'n':
+          case 'N':
+            $('#btn_nxt').click();
+            break;
+          case 'p':
+          case 'P':
+            $('#btn_prv').click();
+            break;
+        }
+      });
     "))
   ),
   layout_sidebar(
@@ -123,13 +150,13 @@ ui <- fluidPage(
     # Buttons to validate CNVs and move around
     div(
       fluidRow(
-        actionButton("true", "True", class = "btn-success"),
-        actionButton("false", "False", class = "btn-danger"),
-        actionButton("unk", "Unkown", class = 'btn-warning'),
-        actionButton("err", "Error"),
-        actionButton("prv", "Previous", class = "btn-default"),
-        actionButton("nxt", "Next", class = "btn-default"),
-        actionButton("ref", "Refine CNV coordinates", class = "btn-info"),
+        actionButton("btn_true", "True", class = "btn-success"),
+        actionButton("btn_false", "False", class = "btn-danger"),
+        actionButton("btn_unk", "Unkown", class = 'btn-warning'),
+        actionButton("btn_err", "Error"),
+        actionButton("btn_prv", "Previous", class = "btn-default"),
+        actionButton("btn_nxt", "Next", class = "btn-default"),
+        actionButton("btn_ref", "Refine CNV coordinates", class = "btn-info"),
         textOutput('progress')
       )
     )
@@ -200,19 +227,19 @@ server <- function(input, output, session) {
   })
 
   # 3. Navigation and validation logic
-  observeEvent(input$nxt, {
+  observeEvent(input$btn_nxt, {
     if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
-  observeEvent(input$prv, {
+  observeEvent(input$btn_prv, {
     if (r_state$current_idx > 1) {
       r_state$current_idx <- r_state$current_idx - 1
     }
   })
 
   # Validation buttons
-  observeEvent(input$true, {
+  observeEvent(input$btn_true, {
     idx <- r_state$current_idx
     row <- r_state$filtered_cnvs[idx]
     r_state$cnvs[sample_ID == row$sample_ID & 
@@ -224,7 +251,7 @@ server <- function(input, output, session) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
-  observeEvent(input$false, {
+  observeEvent(input$btn_false, {
     idx <- r_state$current_idx
     row <- r_state$filtered_cnvs[idx]
     r_state$cnvs[sample_ID == row$sample_ID & 
@@ -236,7 +263,7 @@ server <- function(input, output, session) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
-  observeEvent(input$unk, {
+  observeEvent(input$btn_unk, {
     idx <- r_state$current_idx
     row <- r_state$filtered_cnvs[idx]
     r_state$cnvs[sample_ID == row$sample_ID & 
@@ -248,7 +275,7 @@ server <- function(input, output, session) {
       r_state$current_idx <- r_state$current_idx + 1
     }
   })
-  observeEvent(input$err, {
+  observeEvent(input$btn_err, {
     idx <- r_state$current_idx
     row <- r_state$filtered_cnvs[idx]
     r_state$cnvs[sample_ID == row$sample_ID & 
