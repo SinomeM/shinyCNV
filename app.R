@@ -137,12 +137,7 @@ ui <- fluidPage(
 )
 
 
-
 # Server function ----
-
-# Missing features:
-#  - Ability to update CNV coordinates (start/end) and save changes
-#  - Update launch instructions and possibly the app startup itself
 
 server <- function(input, output, session) {
   # 1. Initialize reactive values
@@ -151,7 +146,9 @@ server <- function(input, output, session) {
     filtered_cnvs = cnvs,           # filtered version
     current_idx = 1,                # current CNV index
     fixed_locus = FALSE,            # whether in fixed locus mode
-    select_region = FALSE           # whether in select region mode
+    select_region = FALSE,          # whether in select region mode
+    snp_pos = integer(),            # positions of filtered SNPs
+    filtered_snps_chr = data.table()# filtered SNPs for the current chromosome
   )
 
   # 2. Filtering logic
@@ -338,12 +335,20 @@ server <- function(input, output, session) {
     tabix_path <- samples[sample_ID == cnv$sample_ID, file_path_tabix]
     chr <- cnv$chr
     snp_dt <- load_sample_snps(tabix_path, chr)
+
     # Clean/filtered SNPs in the chromosome
-    snps_chr <- snps[Chr == chr, ]
+    if (r_state$current_idx == 1) {
+      r_state$filtered_snps_chr <- snps[Chr == chr,]
+      r_state$snp_pos <- r_state$filtered_snps_chr[, unique(Position)]
+    }
+    else if (r_state$filtered_snps_chr[, Chr][1] != chr) {
+      r_state$filtered_snps_chr <- snps[Chr == chr,]
+      r_state$snp_pos <- r_state$filtered_snps_chr[, unique(Position)]
+    }
 
     # Select filtered SNPs if requested
     if (!is.null(input$snp_filtering) && input$snp_filtering == "yes") {
-      snp_dt <- snp_dt[start %in% unique(snps_chr[, unique(Position)]), ]
+      snp_dt <- snp_dt[start %in% r_state$snp_pos, ]
     }
     # Empty plot if no snps are left
     if (nrow(snp_dt) == 0) return(plotly_empty())
