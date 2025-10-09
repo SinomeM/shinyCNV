@@ -143,7 +143,6 @@ ui <- fluidPage(
 #  - Ability to update CNV coordinates (start/end) and save changes
 #  - Update launch instructions and possibly the app startup itself
 
-
 server <- function(input, output, session) {
   # 1. Initialize reactive values
   r_state <- reactiveValues(
