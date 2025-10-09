@@ -1,34 +1,3 @@
-# CNV visualization tool
-
-# This app takes as input:
-#  - a folder to save results
-#  - a table of CNVs (sample_ID, chr, start, end, GT, vo, CN, length, numsnp)
-#  - a table linking each sample_ID to a tabix-indexed file (sample_ID, file_path_tabix)
-#  - a table of filtered SNP (Name, Chr, Position)
-
-# The tabix-indexed files should contain is expected to be a tab-separated file
-# with the following columns (no header): chr, position, position, LRR, BAF, LRR_adj
-# (if LRR_adj is not present, the app will use LRR instead).
-
-# In `data/` examples for all the input files are provided.
-
-
-# App modes:
-#  1. Normal: the app will go through all CNVs in the provided table
-#  2. Simple Filtering: the CNVs table will be filtered based on the provided
-#     criteria (vo, GT, length, numsnp).
-#  3. Fixed locus: the app will select putative carriers in the provided
-#     locus. If any filter is provided, it will also be applied (before selecting).
-#    NB: in this mode the locus is the units of analysis, not the CNVs.
-#  4. Select CNVs in region: the app will allow the user to specify a genomic region
-#     and will only show CNVs that overlap with this region (above a certain IOU
-#     threshold). Also in this mode any provided filter will be applied first.
-
-# In all modes the app will plot all CNVs for the sample (before any filtering)
-# on the same chromosome as the current CNV. The CNV of interest is highlighted with
-# a thin border. In fixed locus and select region modes, the locus/region is also
-# highlighted with a gray box and thicker border.
-
 library(DT)
 library(bslib)
 library(shiny)
@@ -36,13 +5,15 @@ library(ggplot2)
 library(data.table)
 library(plotly)
 
-# Set this to true when running from command line
-if (F) {
-  cargs <- commandArgs(trailingOnly = T)
-  # working dir, cnvs, samples, snps
+# Controls whether the inputs are taken from command line or from test data
+testing <- TRUE
 
-  # quickly check inputs
-  if (!dir.exists(cargs[1])) stop('Provided folder not found!')
+if (testing == FALSE) {
+  # working dir, cnvs, samples, snps
+  cargs <- commandArgs(trailingOnly = T)
+
+  # Check inputs
+  if (!dir.exists(cargs[1])) warning('Provided folder not found!')
   if (!file.exists(cargs[2])) stop('CNVs table not found!')
   if (!file.exists(cargs[3])) stop('Samples table not found!')
   if (!file.exists(cargs[4])) stop('SNPs table not found!')
@@ -52,8 +23,7 @@ if (F) {
   snps <- fread(cargs[4])
 }
 
-# For testing purposes only
-if (T) {
+if (testing) {
   wkdir <- './tmp'
   cnvs <- fread('./data/cnvs.txt')
   samples <- fread('data/samples_list.txt')
@@ -91,7 +61,7 @@ ui <- fluidPage(
       .shiny-notification-warning {
         background-color: #c62828;
         color: #ffffff;
-        font-size: 1.1rem;
+        font-size: 2rem;
         font-weight: 600;
         box-shadow: 0 0 20px rgba(198, 40, 40, 0.7);
       }
@@ -171,9 +141,7 @@ ui <- fluidPage(
 
 # Missing features:
 #  - Ability to update CNV coordinates (start/end) and save changes
-#  - Raise an error if the output file already exists or cannot be written
 #  - Update launch instructions and possibly the app startup itself
-#  - Update README once the app is stable, keep the old version for reference
 
 
 server <- function(input, output, session) {

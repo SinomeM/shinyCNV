@@ -71,11 +71,12 @@ To use the app just run
 `Rscript app.R /path/to/workingdir /path/to/cnvs.txt /path/to/samplee.txt /path/to/snps.txt`.
 Input files can be anywhere, all path must be full (starting from `/` with
 no symlinks), the results will be saved in `workingdir`.
-
 Every times the app the app moves from one CNV to the next (or previous) the
 output table is saved in the provided `workingdir` as `project_name.tsv`. If
 `workingdir` the app will attempt to create it. If the also the parent folder does
-exist, the app will assume there is a typo in the provided path and will stop.
+exist, the app will assume there is a typo in the provided path and will stop.   
+**NB**: the app will overwrite any existing `project_name.tsv` file in the provided
+`workingdir` without warning.
 
 
 ## Visual inspection codes
