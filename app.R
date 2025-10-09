@@ -285,7 +285,15 @@ server <- function(input, output, session) {
   })
 
   # 6. Helper function to load SNPs for a sample and chromosome using tabix
+  # Cache SNPs to avoid reloading them multiple times
+  snp_cache <- new.env(parent = emptyenv())
+
   load_sample_snps <- function(tabix_path, chr) {
+    # Check cache first
+    key <- paste(tabix_path, chr, sep = "::")
+    if (exists(key, envir = snp_cache, inherits = FALSE))
+      return(get(key, envir = snp_cache))
+
     # Use system tabix to extract SNPs for the chromosome
     cmd <- paste0("tabix ", tabix_path, " ", chr, ":", 0,
                           "-", 275000000) # 275 Mbp is larger than chromosome 1
@@ -312,6 +320,9 @@ server <- function(input, output, session) {
                      LRR = as.numeric(LRR),
                      BAF = as.numeric(BAF))]
     }
+
+    # Store in cache
+    assign(key, snp_dt, envir = snp_cache)
 
     return(unique(snp_dt))
   }
@@ -341,7 +352,11 @@ server <- function(input, output, session) {
       r_state$filtered_snps_chr <- snps[Chr == chr,]
       r_state$snp_pos <- r_state$filtered_snps_chr[, unique(Position)]
     }
+    # chromosome changed, reload filtered SNPs and clear cache
     else if (r_state$filtered_snps_chr[, Chr][1] != chr) {
+      if (length(ls(envir = snp_cache)) > 0)
+        rm(list = ls(envir = snp_cache), envir = snp_cache)
+
       r_state$filtered_snps_chr <- snps[Chr == chr,]
       r_state$snp_pos <- r_state$filtered_snps_chr[, unique(Position)]
     }
