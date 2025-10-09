@@ -64,6 +64,8 @@ The app interface is divided in two main parts:
 This new version implements also the ability to refine CNV boundaries.
 When the user clicks on the `Refine boundaries` button, the app will ...
 
+**NOT YET IMPLEMENTED**
+
 
 ## Usage
 
