@@ -10,6 +10,8 @@
 # with the following columns (no header): chr, position, position, LRR, BAF, LRR_adj
 # (if LRR_adj is not present, the app will use LRR instead).
 
+# In `data/` examples for all the input files are provided.
+
 
 # App modes:
 #  1. Normal: the app will go through all CNVs in the provided table
