@@ -433,14 +433,14 @@ server <- function(input, output, session) {
         type = "rect",
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = -1.5, y1 = 1.5,
-        fillcolor = "rgba(255, 0, 0, 0.05)",
+        fillcolor = "rgba(255, 0, 0, 0.1)",
         line = list(width = ifelse(i == 1, 0.1, 0))
       )
       baf_outlines[[i]] <- list(
         type = "rect",
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = 0, y1 = 1,
-        fillcolor = "rgba(0, 0, 255, 0.05)",
+        fillcolor = "rgba(0, 0, 255, 0.1)",
         line = list(width = ifelse(i == 1, 0.1, 0))
       )
     }
@@ -658,7 +658,7 @@ server <- function(input, output, session) {
     # Update filtered table and reset index
     r_state$filtered_cnvs <- cnvs
     r_state$current_idx <- 1
-    r_state$fixed_locus <- TRUE
+    r_state$select_region <- TRUE
   })
 
 }
