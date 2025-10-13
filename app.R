@@ -236,64 +236,32 @@ server <- function(input, output, session) {
 
   # 3. Navigation and validation logic
   observeEvent(input$btn_nxt, {
-    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
-      r_state$current_idx <- r_state$current_idx + 1
-    }
+    r_state$current_idx <- r_state$current_idx + 1
   })
   observeEvent(input$btn_prv, {
-    if (r_state$current_idx > 1) {
-      r_state$current_idx <- r_state$current_idx - 1
-    }
+    r_state$current_idx <- r_state$current_idx - 1
   })
 
   # Validation buttons
   observeEvent(input$btn_true, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx]
-    r_state$cnvs[sample_ID == row$sample_ID & 
-                 chr == row$chr & 
-                 start == row$start & 
-                 end == row$end, 
-                 vo := 1]
-    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
-      r_state$current_idx <- r_state$current_idx + 1
-    }
+    r_state$filtered_cnvs[idx, vo := 1]
+    r_state$current_idx <- r_state$current_idx + 1
   })
   observeEvent(input$btn_false, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx]
-    r_state$cnvs[sample_ID == row$sample_ID & 
-                 chr == row$chr & 
-                 start == row$start & 
-                 end == row$end, 
-                 vo := 2]
-    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
-      r_state$current_idx <- r_state$current_idx + 1
-    }
+    r_state$filtered_cnvs[idx, vo := 2]
+    r_state$current_idx <- r_state$current_idx + 1
   })
   observeEvent(input$btn_unk, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx]
-    r_state$cnvs[sample_ID == row$sample_ID & 
-                 chr == row$chr & 
-                 start == row$start & 
-                 end == row$end, 
-                 vo := 3]
-    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
-      r_state$current_idx <- r_state$current_idx + 1
-    }
+    r_state$filtered_cnvs[idx, vo := 3]
+    r_state$current_idx <- r_state$current_idx + 1
   })
   observeEvent(input$btn_err, {
     idx <- r_state$current_idx
-    row <- r_state$filtered_cnvs[idx]
-    r_state$cnvs[sample_ID == row$sample_ID & 
-                 chr == row$chr & 
-                 start == row$start & 
-                 end == row$end, 
-                 vo := -7]
-    if (r_state$current_idx < nrow(r_state$filtered_cnvs)) {
-      r_state$current_idx <- r_state$current_idx + 1
-    }
+    r_state$filtered_cnvs[idx, vo := -7]
+    r_state$current_idx <- r_state$current_idx + 1
   })
 
   # 4. Render current CNV table row
@@ -414,7 +382,7 @@ server <- function(input, output, session) {
     # Use LRR_adj if present, else LRR
     lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
 
-    # Default zoom window: CNV ± 8 lengths
+    # Default zoom window: CNV ± 8 lengths (ADD, center on locus in fixed locus and region modes)
     cnv_len <- if (!is.na(cnv$length)) cnv$length else (cnv$end - cnv$start + 1)
     flank <- 8 * cnv_len
     window_start <- max(cnv$start - flank, 0)
