@@ -27,8 +27,8 @@ if (testing == FALSE) {
 if (testing) {
   wkdir <- './tmp'
   cnvs <- fread('./data/cnvs.txt')
-  samples <- fread('data/samples_list.txt')
-  snps <- fread('data/hd_1kG_hg19.snppos.filtered.test.gz')
+  samples <- fread('./data/samples_list.txt')
+  snps <- fread('./data/hd_1kG_hg19.snppos.filtered.test.gz')
   snps[, ':=' (Name = as.character(Name),
               Chr = as.character(Chr),
               Position = as.integer(Position))]
@@ -110,8 +110,9 @@ ui <- fluidPage(
       fluidRow(
         h4('Settings'),
         textInput('project_name', 'Project Name', ''),
-        selectInput('snp_filtering', 'Filter SNPs based on input SNP table?',
-                    c('yes', 'no'), 'yes')
+        selectInput('snp_filtering', 'Show only filtered SNPs?',
+                    c('yes', 'no'), 'yes'),
+        sliderInput('zoom_lvl', 'Base zoom level', min = 2, max = 20, value = 10, step = 2)
       ),
       # CNVs filtering
       fluidRow(
@@ -119,9 +120,9 @@ ui <- fluidPage(
         selectInput('vo_filter', 'Filter CNV previous VI',
                     c('all', 'new', 'true', 'false', 'unkown', 'error'), 'all'),
         selectInput('gt_filter', 'Filter CNV GT', c('both', 'dels', 'dups'), 'both'),
-        textInput("min_len_filter", "Minimum CNV length (bp)", '50000'),
+        textInput("min_len_filter", "Minimum CNV length (bp)", '25000'),
         textInput("max_len_filter", "Maximum CNV length (bp)", '10000000'),
-        textInput("min_snp_filter", "Minimum number of SNPs", '0'),
+        textInput("min_snp_filter", "Minimum number of SNPs", '5'),
         actionButton('run_filtering', 'Simple Filtering', class = 'btn-primary')
       ),
       # Fixed locus
@@ -164,8 +165,11 @@ ui <- fluidPage(
         actionButton("btn_err", "Error"),
         actionButton("btn_prv", "Previous", class = "btn-default"),
         actionButton("btn_nxt", "Next", class = "btn-default"),
-        actionButton("btn_ref", "Refine CNV coordinates", class = "btn-info"),
+        actionButton("btn_ref", "Update CNV coordinates", class = "btn-info"),
         textOutput('progress')
+      ),
+      fluidRow(
+        verbatimTextOutput("selected")
       )
     )
   )
@@ -382,9 +386,9 @@ server <- function(input, output, session) {
     # Use LRR_adj if present, else LRR
     lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
 
-    # Default zoom window: CNV ± 8 lengths (ADD, center on locus in fixed locus and region modes)
+    # Default zoom window (ADD, center on locus in fixed locus and region modes)
     cnv_len <- if (!is.na(cnv$length)) cnv$length else (cnv$end - cnv$start + 1)
-    flank <- 8 * cnv_len
+    flank <- input$zoom_lvl * cnv_len
     window_start <- max(cnv$start - flank, 0)
     window_end <- cnv$end + flank
 
@@ -397,19 +401,23 @@ server <- function(input, output, session) {
     baf_outlines <- list()
     for (i in 1:all_cnvs[, .N]) {
       line <- all_cnvs[i]
+      # Find if this CNV matches the current one
+      is_current <- (line$sample_ID == cnv$sample_ID && 
+                     line$start == cnv$start && 
+                     line$end == cnv$end)
       lrr_outlines[[i]] <- list(
         type = "rect",
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = -1.5, y1 = 1.5,
         fillcolor = "rgba(255, 0, 0, 0.1)",
-        line = list(width = ifelse(i == 1, 0.1, 0))
+        line = list(width = ifelse(is_current, 0.15, 0))
       )
       baf_outlines[[i]] <- list(
         type = "rect",
         xref = "x", x0 = line$start, x1 = line$end,
         yref = "y", y0 = 0, y1 = 1,
         fillcolor = "rgba(0, 0, 255, 0.1)",
-        line = list(width = ifelse(i == 1, 0.1, 0))
+        line = list(width = ifelse(is_current, 0.15, 0))
       )
     }
 
@@ -484,7 +492,14 @@ server <- function(input, output, session) {
 
     # Combine LRR and BAF plots into a single figure with shared x-axis
     fig <- subplot(p2, p1, nrows = 2, shareX = TRUE, titleY = TRUE) %>%
-      layout(dragmode = "pan")
+      layout(dragmode = "select")  %>%
+      config(
+        modeBarButtonsToRemove = c(
+          'lasso2d', 'autoScale2d', 'hoverClosestCartesian', 'zoomin2d',
+          'hoverCompareCartesian', 'toggleSpikelines', 'toImage', 'zoomout2d'),
+        displaylogo = FALSE
+      ) %>%
+      event_register("plotly_selected")
     fig
   })
 
@@ -554,7 +569,8 @@ server <- function(input, output, session) {
     cnvs <- cnvs[chr == loc_chr & 
                  start <= loc_end & 
                  end >= loc_start, ]
-    cnvs[, overlap := pmin(end, loc_end) - pmax(start, loc_start) + 1]
+    cnvs[, overlap := (pmin(end, loc_end) - pmax(start, loc_start) + 1) /
+             (loc_end - loc_start + 1)]
     cnvs <- cnvs[overlap >= min_overlap, ]
 
     # assign the locus boundaries to the CNVs
@@ -627,6 +643,21 @@ server <- function(input, output, session) {
     r_state$filtered_cnvs <- cnvs
     r_state$current_idx <- 1
     r_state$select_region <- TRUE
+  })
+
+  # 11. Boundaries update
+  output$selected <- renderPrint({
+    d <- event_data("plotly_selected")
+    if (is.null(d)) 'No points selected'
+    else paste0('New start and stop positions: ',
+                min(d$x), ' - ', max(d$x))
+  })
+
+  observeEvent(input$btn_ref, {
+    idx <- r_state$current_idx
+    d <- event_data("plotly_selected")
+    if (!is.null(d))
+      r_state$filtered_cnvs[idx, ':=' (start = min(d$x), end = max(d$x))]
   })
 
 }
