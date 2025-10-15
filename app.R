@@ -112,7 +112,8 @@ ui <- fluidPage(
         textInput('project_name', 'Project Name', ''),
         selectInput('snp_filtering', 'Show only filtered SNPs?',
                     c('yes', 'no'), 'yes'),
-        sliderInput('zoom_lvl', 'Base zoom level', min = 2, max = 20, value = 10, step = 2)
+        sliderInput('zoom_lvl', 'Base zoom level (n lengths per side)',
+                    min = 2, max = 20, value = 10, step = 2)
       ),
       # CNVs filtering
       fluidRow(
@@ -347,6 +348,13 @@ server <- function(input, output, session) {
       return(plotly_empty())
     }
 
+    # If the vo of the current line is -1, return empty plot and a warning message
+    if (r_state$filtered_cnvs[r_state$current_idx, vo] == -1) {
+      showNotification("This CNV has been included in another via boundary update.",
+                       type = "warning")
+      return(plotly_empty())
+    }
+
     # Get current CNV, if null or empty return empty plot
     cnv <- r_state$filtered_cnvs[r_state$current_idx]
     if (is.null(cnv) || nrow(cnv) == 0) {
@@ -390,11 +398,22 @@ server <- function(input, output, session) {
     # Use LRR_adj if present, else LRR
     lrr_col <- if ("LRR_adj" %in% names(snp_dt)) "LRR_adj" else "LRR"
 
-    # Default zoom window (ADD, center on locus in fixed locus and region modes)
-    cnv_len <- if (!is.na(cnv$length)) cnv$length else (cnv$end - cnv$start + 1)
-    flank <- input$zoom_lvl * cnv_len
-    window_start <- max(cnv$start - flank, 0)
-    window_end <- cnv$end + flank
+    # Default zoom window. Start and end of CNV in normal and select region modes
+    if (r_state$fixed_locus == F) {
+      cnv_len <- if (!is.na(cnv$length)) cnv$length else (cnv$end - cnv$start + 1)
+      flank <- input$zoom_lvl * cnv_len
+      window_start <- max(cnv$start - flank, 0)
+      window_end <- cnv$end + flank
+    }
+    # Locus boundaries in fixed locus mode
+    if (r_state$fixed_locus == T) {
+      loc_start <- as.integer(input$locus_start)
+      loc_end <- as.integer(input$locus_end)
+      loc_len <- loc_end - loc_start + 1
+      flank <- input$zoom_lvl * loc_len
+      window_start <- max(loc_start - flank, 0)
+      window_end <- loc_end + flank
+    }
 
     # Get all CNVs on the  chromosome for this sample (before filtering)
     all_cnvs <- r_state$cnvs[sample_ID == cnv$sample_ID & chr == cnv$chr, ]
@@ -662,10 +681,19 @@ server <- function(input, output, session) {
     idx <- r_state$current_idx
     d <- event_data("plotly_selected")
     if (!is.null(d)) {
+      new_st <- min(d$x)
+      new_en <- max(d$x)
+      # Mark all CNVs that are overlapping the new boundaries as -1
+      r_state$filtered_cnvs[sample_ID == r_state$filtered_cnvs[idx, sample_ID] &
+        chr == r_state$filtered_cnvs[idx, chr] &
+        start <= new_en & end >= new_st, vo := -1]
+
       # update start and end positions
-      r_state$filtered_cnvs[idx, ':=' (start = min(d$x), end = max(d$x))]
-      # update length and numsnp
-      r_state$filtered_cnvs[idx, ':=' (length = end - start + 1, numsnp = nrow(d))]
+      r_state$filtered_cnvs[idx, ':=' (start = new_st, end = new_en)]
+      # update length and numsnp, and set vo to 1
+      # (if the boundaries are updated then it must be true)
+      r_state$filtered_cnvs[idx, ':=' (length = end - start + 1, numsnp = nrow(d), vo = 1)]
+
       # retrigger plot and table rendering
       r_state$plot_retrigger <- r_state$plot_retrigger + 1
     }
