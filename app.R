@@ -180,6 +180,7 @@ ui <- fluidPage(
 # Server function ----
 
 server <- function(input, output, session) {
+
   # 1. Initialize reactive values
   r_state <- reactiveValues(
     cnvs = cnvs,                       # original CNV table
@@ -192,11 +193,10 @@ server <- function(input, output, session) {
     plot_retrigger = 0                 # to force plot re-rendering
   )
 
-  # 2. Filtering logic
-  observeEvent(input$run_filtering, {
-    # always start from the original CNV table
-    filtered <- r_state$cnvs
 
+  # 2. Filtering logic
+
+  filter_cnvs <- function(cnv_in) {
     # Convert inputs to integer and check if they are valid
     min_len <- as.integer(input$min_len_filter)
     max_len <- as.integer(input$max_len_filter)
@@ -204,43 +204,49 @@ server <- function(input, output, session) {
 
     # Apply filters based on input values
     if (!is.na(input$min_len_filter)) {
-      filtered <- filtered[length >= min_len]
+      cnv_in <- cnv_in[length >= min_len]
     }
     if (!is.na(input$max_len_filter)) {
-      filtered <- filtered[length <= max_len]
+      cnv_in <- cnv_in[length <= max_len]
     }
     if (!is.na(input$min_snp_filter)) {
-      filtered <- filtered[numsnp >= min_snp]
+      cnv_in <- cnv_in[numsnp >= min_snp]
     }
     if (!is.null(input$gt_filter) && input$gt_filter != 'both' &&
         !is.na(input$gt_filter)) {
       if (input$gt_filter == 'dels') {
-        filtered <- filtered[GT == 1, ]
+        cnv_in <- cnv_in[GT == 1, ]
       } else if (input$gt_filter == 'dups') {
-        filtered <- filtered[GT == 2, ]
+        cnv_in <- cnv_in[GT == 2, ]
       }
     }
     if (!is.null(input$vo_filter) && input$vo_filter != 'all' &&
         !is.na(input$vo_filter)) {
       if (input$vo_filter == 'new') {
-        filtered <- filtered[vo == -9, ]
+        cnv_in <- cnv_in[vo == -9, ]
       } else if (input$vo_filter == 'true') {
-        filtered <- filtered[vo == 1, ]
+        cnv_in <- cnv_in[vo == 1, ]
       } else if (input$vo_filter == 'false') {
-        filtered <- filtered[vo == 2, ]
+        cnv_in <- cnv_in[vo == 2, ]
       } else if (input$vo_filter == 'unkown') {
-        filtered <- filtered[vo == 3, ]
+        cnv_in <- cnv_in[vo == 3, ]
       } else if (input$vo_filter == 'error') {
-        filtered <- filtered[vo == -7, ]
+        cnv_in <- cnv_in[vo == -7, ]
       }
     }
+  return(cnv_in)
+  }
 
-    # Update filtered table and reset index
-    r_state$filtered_cnvs <- filtered
+  observeEvent(input$run_filtering, {
+    # Update filtered table and reset index, always start from the original CNV table
+    r_state$filtered_cnvs <- filter_cnvs(r_state$cnvs)
     r_state$current_idx <- 1
   })
 
+
   # 3. Navigation and validation logic
+
+  # Navigation buttons
   observeEvent(input$btn_nxt, {
     r_state$current_idx <- r_state$current_idx + 1
   })
@@ -270,7 +276,9 @@ server <- function(input, output, session) {
     r_state$current_idx <- r_state$current_idx + 1
   })
 
+
   # 4. Render current CNV table row
+
   output$cnv_table <- renderDT({
     r_state$plot_retrigger  # to force re-rendering when needed
     current_row <- r_state$filtered_cnvs[r_state$current_idx]
@@ -286,7 +294,9 @@ server <- function(input, output, session) {
     )
   })
 
+
   # 5. Progress text
+
   output$progress <- renderText({
     total <- nrow(r_state$filtered_cnvs)
     idx <- r_state$current_idx
@@ -294,7 +304,9 @@ server <- function(input, output, session) {
     sprintf("CNV %d out of %d (%.1f%%)", idx, total, percent)
   })
 
+
   # 6. Helper function to load SNPs for a sample and chromosome using tabix
+
   # Cache SNPs to avoid reloading them multiple times
   snp_cache <- new.env(parent = emptyenv())
 
@@ -337,8 +349,9 @@ server <- function(input, output, session) {
     return(unique(snp_dt))
   }
 
+
   # 7. CNV plot
-  # plotly version
+
   output$cnv_plotly <- renderPlotly({
     r_state$plot_retrigger  # to force re-rendering when needed
 
@@ -526,7 +539,9 @@ server <- function(input, output, session) {
     fig
   })
 
+  
   # 8. Save table
+
   observeEvent(r_state$current_idx, {
     req(nrow(r_state$filtered_cnvs) > 0)
 
@@ -542,7 +557,9 @@ server <- function(input, output, session) {
     fwrite(r_state$filtered_cnvs, out_path, sep = "\t")
   }, ignoreNULL = TRUE)
 
+
   # 9. Fixed locus
+
   observeEvent(input$run_fixed_locus, {
     loc_name <- as.character(input$locus_name)
     loc_chr <- as.integer(input$locus_chr)
@@ -567,26 +584,8 @@ server <- function(input, output, session) {
     }
 
     # If all inputs are valid, select the putative carriers from the original CNV table
-    cnvs <- r_state$cnvs
-
     # first apply filters if provided
-    if (!is.na(min_len)) {
-      cnvs <- cnvs[length >= min_len]
-    }
-    if (!is.na(max_len)) {
-      cnvs <- cnvs[length <= max_len]
-    }
-    if (!is.na(min_snp)) {
-      cnvs <- cnvs[numsnp >= min_snp]
-    }
-    if (!is.null(input$gt_filter) && input$gt_filter != 'both' &&
-        !is.na(input$gt_filter)) {
-      if (input$gt_filter == 'dels') {
-        cnvs <- cnvs[GT == 1, ]
-      } else if (input$gt_filter == 'dups') {
-        cnvs <- cnvs[GT == 2, ]
-      }
-    }
+    cnvs <- filter_cnvs(r_state$cnvs)
 
     # then select the CNVs overlapping the locus and compute the overlap
     cnvs <- cnvs[chr == loc_chr & 
@@ -633,28 +632,10 @@ server <- function(input, output, session) {
     }
 
     # If all inputs are valid, select the putative carriers from the original CNV table
-    cnvs <- r_state$cnvs
-
     # first apply filters if provided
-    if (!is.na(min_len)) {
-      cnvs <- cnvs[length >= min_len]
-    }
-    if (!is.na(max_len)) {
-      cnvs <- cnvs[length <= max_len]
-    }
-    if (!is.na(min_snp)) {
-      cnvs <- cnvs[numsnp >= min_snp]
-    }
-    if (!is.null(input$gt_filter) && input$gt_filter != 'both' &&
-        !is.na(input$gt_filter)) {
-      if (input$gt_filter == 'dels') {
-        cnvs <- cnvs[GT == 1, ]
-      } else if (input$gt_filter == 'dups') {
-        cnvs <- cnvs[GT == 2, ]
-      }
-    }
+    cnvs <- filter_cnvs(r_state$cnvs)
 
-    # then select the CNVs overlapping the locus and compute the overlap
+    # then select the CNVs overlapping the region and compute the IOU
     cnvs <- cnvs[chr == reg_chr & 
                  start <= reg_end & 
                  end >= reg_start, ]
