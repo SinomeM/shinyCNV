@@ -181,13 +181,14 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   # 1. Initialize reactive values
   r_state <- reactiveValues(
-    cnvs = cnvs,                    # original CNV table
-    filtered_cnvs = cnvs,           # filtered version
-    current_idx = 1,                # current CNV index
-    fixed_locus = FALSE,            # whether in fixed locus mode
-    select_region = FALSE,          # whether in select region mode
-    snp_pos = integer(),            # positions of filtered SNPs
-    filtered_snps_chr = data.table()# filtered SNPs for the current chromosome
+    cnvs = cnvs,                       # original CNV table
+    filtered_cnvs = cnvs,              # filtered version
+    current_idx = 1,                   # current CNV index
+    fixed_locus = FALSE,               # whether in fixed locus mode
+    select_region = FALSE,             # whether in select region mode
+    snp_pos = integer(),               # positions of filtered SNPs
+    filtered_snps_chr = data.table(),  # filtered SNPs for the current chromosome
+    plot_retrigger = 0                 # to force plot re-rendering
   )
 
   # 2. Filtering logic
@@ -270,6 +271,7 @@ server <- function(input, output, session) {
 
   # 4. Render current CNV table row
   output$cnv_table <- renderDT({
+    r_state$plot_retrigger  # to force re-rendering when needed
     current_row <- r_state$filtered_cnvs[r_state$current_idx]
     datatable(
       current_row[, .(sample_ID, chr, "start (Mbp)" = round(start/1e6, 2),
@@ -337,6 +339,8 @@ server <- function(input, output, session) {
   # 7. CNV plot
   # plotly version
   output$cnv_plotly <- renderPlotly({
+    r_state$plot_retrigger  # to force re-rendering when needed
+
     # if no CNVs or index out of bounds, return empty plot
     if (nrow(r_state$filtered_cnvs) == 0 ||
         r_state$current_idx > nrow(r_state$filtered_cnvs)) {
@@ -650,14 +654,21 @@ server <- function(input, output, session) {
     d <- event_data("plotly_selected")
     if (is.null(d)) 'No points selected'
     else paste0('New start and stop positions: ',
-                min(d$x), ' - ', max(d$x))
+                min(d$x), ' - ', max(d$x), '. ',
+                'New number of SNPs: ', nrow(d))
   })
 
   observeEvent(input$btn_ref, {
     idx <- r_state$current_idx
     d <- event_data("plotly_selected")
-    if (!is.null(d))
+    if (!is.null(d)) {
+      # update start and end positions
       r_state$filtered_cnvs[idx, ':=' (start = min(d$x), end = max(d$x))]
+      # update length and numsnp
+      r_state$filtered_cnvs[idx, ':=' (length = end - start + 1, numsnp = nrow(d))]
+      # retrigger plot and table rendering
+      r_state$plot_retrigger <- r_state$plot_retrigger + 1
+    }
   })
 
 }
