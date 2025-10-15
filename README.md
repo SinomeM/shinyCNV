@@ -21,9 +21,9 @@ modes:
 This app takes as input:
 
 - a folder to save results
-- a table of CNVs (sample_ID, chr, start, end, GT, vo, CN, length, numsnp)
-- a table linking each sample_ID to a tabix-indexed file (sample_ID, file_path_tabix)
-- a table of filtered SNP (Name, Chr, Position)
+- a table of CNVs (`sample_ID`, `chr`, `start`, `end`, `GT`, `vo`, `CN`, `length`, `numsnp`)
+- a table linking each sample_ID to a tabix-indexed file (`sample_ID`, `file_path_tabix`)
+- a table of filtered SNP (`Name`, `Chr`, `Position`)
 
 The tabix-indexed files should contain is expected to be a tab-separated file
 with the following columns (no header): chr, position, position, LRR, BAF, LRR_adj
@@ -55,8 +55,7 @@ The app interface is divided in two main parts:
   In all modes the app will plot all CNVs for the sample (before any filtering)
   on the same chromosome as the current CNV. The CNV of interest is highlighted with
   a thin border. In fixed locus and select region modes, the locus/region is also
-  highlighted with a gray box and thicker border. The plot can be zoomed in and out
-  using the scroll wheel or the `+`/`-` buttons on the top right of the plot.
+  highlighted with a gray box and thicker border.
 
 Below the plot there are buttons to navigate through CNVs, store the visual
 validation for the CNV and to refine boundaries. The buttons are:
@@ -67,7 +66,7 @@ validation for the CNV and to refine boundaries. The buttons are:
 - `Error`: mark the current CNV call as erroneous
 - `Previous`: go to the previous CNV
 - `Next`: go to the next CNV
-- `Refine CNV coordinates`: open a modal to refine the boundaries of the current CNV
+- `Update CNV coordinates`: update current CNV coordinates, see next section for details.
 
 The buttons can also be activated using the keyboard:
 
@@ -80,15 +79,30 @@ The buttons can also be activated using the keyboard:
 - `R`: Refine CNV coordinates
 
 
+# Interact with the plot
+
+This new version uses `plotly` to display the CNVs. This allows to dinamically
+change the view of the plot, both zooming in and out, and panning left and right.
+The zoom can be controlled with a dedicated slider in the sidebar. By default,
+the click and drag is set to "select" mode, to be used for the boundaries function.
+To move (pannig) the plot, select the pan icon in the top right corner of the plot
+(4 arrows pointing outwards).
+
+
 # Update Boundaries
 
-This new version implements also the ability to refine CNV boundaries.
-When the user clicks on the `Refine boundaries` button, the app will ...
+This new version implements also the ability to refine CNV boundaries. First the
+user needs to select a region in the plot (both LRR or BAF work). The text below
+the validation buttons will display the new coordinates and the updated number of
+markers. Note that this is is based on the displayed dots so it will change depending
+on whetther all markers are shown or just the filtered ones. If the user is
+satisfied with the selection, they can click on the `Update CNV coordinates` button.
+This will update the current CNV info and mark it as True. Any other CNV
+overlapping the new boundaries will be marked as '-1' and will show a warning
+message when visualised.
 
-**NOT YET IMPLEMENTED**
 
-
-## Usage
+## How to launch the app
 
 To use the app just run
 `Rscript app.R /path/to/workingdir /path/to/cnvs.txt /path/to/samplee.txt /path/to/snps.txt`.
@@ -113,7 +127,7 @@ The `vo` column is coded as follows:
 - \-7 : error
 
 
-## Install
+## How to install the app
 
 Just clone the repo, `app.R` is all is needed to run the program (assuming the
 dependencies are met). 
