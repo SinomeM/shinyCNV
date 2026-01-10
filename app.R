@@ -317,8 +317,7 @@ server <- function(input, output, session) {
       return(get(key, envir = snp_cache))
 
     # Use system tabix to extract SNPs for the chromosome
-    cmd <- paste0("tabix ", tabix_path, " ", chr, ":", 0,
-                          "-", 275000000) # 275 Mbp is larger than chromosome 1
+    cmd <- paste0("tabix ", tabix_path, " ", chr)
     snp_dt <- tryCatch({
       fread(cmd = cmd, header = FALSE)
     }, error = function(e) {
